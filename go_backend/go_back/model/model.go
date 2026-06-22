@@ -16,7 +16,8 @@ type Spot struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	NfcUID      string `json:"nfc_uid"` // NFCタグのUID（リーダーから読み取れる物理ID）
+	NfcUID      string `json:"nfc_uid"`  // NFCタグのUID（リーダーから読み取れる物理ID）
+	QrToken     string `json:"qr_token"` // QRコードに埋め込む一意の文字列
 }
 
 type Stamp struct {
@@ -37,6 +38,12 @@ type StampRequest struct {
 type NfcStampRequest struct {
 	UserID string `json:"user_id" binding:"required"`
 	NfcUID string `json:"nfc_uid" binding:"required"`
+}
+
+// QrStampRequest はQRタグ読み取りによるスタンプ取得のリクエストボディ
+type QrStampRequest struct {
+	UserID  string `json:"user_id" binding:"required"`
+	QrToken string `json:"qr_token" binding:"required"`
 }
 
 // BingoResult はビンゴ状況のレスポンス
@@ -75,15 +82,15 @@ var BingoLines = [][]int{
 var (
 	Mu    sync.Mutex
 	Spots = []Spot{
-		{ID: 1, Name: "東京タワー", Description: "東京の象徴的な電波塔", NfcUID: "04:AB:CD:EF:01"},
-		{ID: 2, Name: "浅草寺", Description: "東京最古の寺院", NfcUID: "04:AB:CD:EF:02"},
-		{ID: 3, Name: "渋谷スクランブル交差点", Description: "世界有数の混雑交差点", NfcUID: "04:AB:CD:EF:03"},
-		{ID: 4, Name: "新宿御苑", Description: "広大な都市公園", NfcUID: "04:AB:CD:EF:04"},
-		{ID: 5, Name: "上野動物園", Description: "日本最古の動物園", NfcUID: "04:AB:CD:EF:05"},
-		{ID: 6, Name: "秋葉原", Description: "電気街・サブカルチャーの聖地", NfcUID: "04:AB:CD:EF:06"},
-		{ID: 7, Name: "銀座", Description: "日本屈指の高級商業地", NfcUID: "04:AB:CD:EF:07"},
-		{ID: 8, Name: "六本木ヒルズ", Description: "複合エンタメ施設", NfcUID: "04:AB:CD:EF:08"},
-		{ID: 9, Name: "東京スカイツリー", Description: "世界最高クラスの電波塔", NfcUID: "04:AB:CD:EF:09"},
+		{ID: 1, Name: "東京タワー", Description: "東京の象徴的な電波塔", NfcUID: "04:AB:CD:EF:01", QrToken: "tokyotower"},
+		{ID: 2, Name: "浅草寺", Description: "東京最古の寺院", NfcUID: "04:AB:CD:EF:02", QrToken: "asakusa"},
+		{ID: 3, Name: "渋谷スクランブル交差点", Description: "世界有数の混雑交差点", NfcUID: "04:AB:CD:EF:03", QrToken: "shibuya"},
+		{ID: 4, Name: "新宿御苑", Description: "広大な都市公園", NfcUID: "04:AB:CD:EF:04", QrToken: "shinjuku"},
+		{ID: 5, Name: "上野動物園", Description: "日本最古の動物園", NfcUID: "04:AB:CD:EF:05", QrToken: "ueno"},
+		{ID: 6, Name: "秋葉原", Description: "電気街・サブカルチャーの聖地", NfcUID: "04:AB:CD:EF:06", QrToken: "akiba"},
+		{ID: 7, Name: "銀座", Description: "日本屈指の高級商業地", NfcUID: "04:AB:CD:EF:07", QrToken: "ginza"},
+		{ID: 8, Name: "六本木ヒルズ", Description: "複合エンタメ施設", NfcUID: "04:AB:CD:EF:08", QrToken: "roppongi"},
+		{ID: 9, Name: "東京スカイツリー", Description: "世界最高クラスの電波塔", NfcUID: "04:AB:CD:EF:09", QrToken: "skytree"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)
