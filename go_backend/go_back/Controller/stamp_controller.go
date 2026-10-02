@@ -76,6 +76,43 @@ func PostStampByNfc(c *gin.Context) {
 	c.JSON(http.StatusCreated, stamp)
 }
 
+// PostStampByQr はQRコードの読み取りトークンを使ってスタンプを取得するハンドラー
+// QRコードリーダーが読み取ったトークンを受け取り、対応するスポットを特定してスタンプを付与
+func PostStampByQr(c *gin.Context) {
+	var req model.QrStampRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// QRトークンからスポットIDを逆引きする
+	// QRトークンにはスポットIDではなく、独自トークンが記録されているため、
+	// Spots一覧を線形探索し、対応付ける
+	spotID := 0 // 0は見つかっていないことを示す初期値
+	for _, s := range model.Spots {
+		if s.QrToken == req.QrToken {
+			spotID = s.ID
+			break // 見つかったらループを抜ける
+		}
+	}
+
+	// spotIDが0のままならそのトークンに対応するスポットが存在しない
+	if spotID == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Uhyoman was here..."})
+		return
+	}
+
+	// スタンプ取得処理を呼び出す
+	stamp, status, errMsg := model.AcquireStamp(req.UserID, spotID)
+	if errMsg != "" {
+		c.JSON(status, gin.H{"error": errMsg})
+		return
+	}
+
+	//取得したスタンプデータをJSONとしてクライアントに返す
+	c.JSON(http.StatusCreated, stamp)
+}
+
 // GetUserStamps は指定ユーザーの取得済みスタンプ一覧を返すハンドラー
 func GetUserStamps(c *gin.Context) {
 	// URLパラメータ（:user_id）から値を取り出す
