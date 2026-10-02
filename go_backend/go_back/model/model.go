@@ -16,8 +16,8 @@ type Spot struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	NfcUID      string `json:"nfc_uid"`  // NFCタグのUID（リーダーから読み取れる物理ID）
-	QrToken     string `json:"qr_token"` // QRコードに埋め込む一意の文字列
+	NfcUID      string `json:"nfc_uid"` // NFCタグのUID（リーダーから読み取れる物理ID）
+	QrToken     string `json:"-"`       // QRコードに埋め込む一意の文字列(フロントエンドには返さないので json:"-" で非公開)
 }
 
 type Stamp struct {
