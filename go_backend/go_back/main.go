@@ -47,7 +47,7 @@ func main() {
 		// POST /api/stamps/nfc：NFCタグのUIDを使ってスタンプを取得する
 		api.POST("/stamps/nfc", controller.PostStampByNfc)
 
-		// POST /api/stams/qr : QRコードを使ってスタンプを取得する
+		// POST /api/stamps/qr : QRコードを使ってスタンプを取得する
 		api.POST("/stamps/qr", controller.PostStampByQr)
 
 		// GET /api/stamps/:user_id：ユーザーの取得済みスタンプ一覧を返す
