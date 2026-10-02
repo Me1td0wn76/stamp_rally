@@ -85,11 +85,11 @@ var (
 		{ID: 1, Name: "東京タワー", Description: "東京の象徴的な電波塔", NfcUID: "04:AB:CD:EF:01", QrToken: "tokyotower"},
 		{ID: 2, Name: "浅草寺", Description: "東京最古の寺院", NfcUID: "04:AB:CD:EF:02", QrToken: "asakusa"},
 		{ID: 3, Name: "渋谷スクランブル交差点", Description: "世界有数の混雑交差点", NfcUID: "04:AB:CD:EF:03", QrToken: "shibuya"},
-		{ID: 4, Name: "新宿御苑", Description: "広大な都市公園", NfcUID: "04:AB:CD:EF:04", QrToken: "shinzyuku"},
+		{ID: 4, Name: "新宿御苑", Description: "広大な都市公園", NfcUID: "04:AB:CD:EF:04", QrToken: "shinjuku"},
 		{ID: 5, Name: "上野動物園", Description: "日本最古の動物園", NfcUID: "04:AB:CD:EF:05", QrToken: "ueno"},
 		{ID: 6, Name: "秋葉原", Description: "電気街・サブカルチャーの聖地", NfcUID: "04:AB:CD:EF:06", QrToken: "akiba"},
 		{ID: 7, Name: "銀座", Description: "日本屈指の高級商業地", NfcUID: "04:AB:CD:EF:07", QrToken: "ginza"},
-		{ID: 8, Name: "六本木ヒルズ", Description: "複合エンタメ施設", NfcUID: "04:AB:CD:EF:08", QrToken: "ropongi"},
+		{ID: 8, Name: "六本木ヒルズ", Description: "複合エンタメ施設", NfcUID: "04:AB:CD:EF:08", QrToken: "roppongi"},
 		{ID: 9, Name: "東京スカイツリー", Description: "世界最高クラスの電波塔", NfcUID: "04:AB:CD:EF:09", QrToken: "skytree"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
