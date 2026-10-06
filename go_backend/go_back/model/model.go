@@ -16,8 +16,8 @@ type Spot struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	NfcUID      string `json:"nfc_uid"` // NFCタグのUID（リーダーから読み取れる物理ID）
-	QrToken     string `json:"-"`       // QRコードに埋め込む一意の文字列(フロントエンドには返さないので json:"-" で非公開)
+	Type        string `json:"type"` // "food","activity","codeflow"の3種類
+	QrToken     string `json:"-"`    // QRコードに埋め込む一意の文字列(フロントエンドには返さないので json:"-" で非公開)
 }
 
 type Stamp struct {
@@ -82,15 +82,9 @@ var BingoLines = [][]int{
 var (
 	Mu    sync.Mutex
 	Spots = []Spot{
-		{ID: 1, Name: "東京タワー", Description: "東京の象徴的な電波塔", NfcUID: "04:AB:CD:EF:01", QrToken: "tokyotower"},
-		{ID: 2, Name: "浅草寺", Description: "東京最古の寺院", NfcUID: "04:AB:CD:EF:02", QrToken: "asakusa"},
-		{ID: 3, Name: "渋谷スクランブル交差点", Description: "世界有数の混雑交差点", NfcUID: "04:AB:CD:EF:03", QrToken: "shibuya"},
-		{ID: 4, Name: "新宿御苑", Description: "広大な都市公園", NfcUID: "04:AB:CD:EF:04", QrToken: "shinjuku"},
-		{ID: 5, Name: "上野動物園", Description: "日本最古の動物園", NfcUID: "04:AB:CD:EF:05", QrToken: "ueno"},
-		{ID: 6, Name: "秋葉原", Description: "電気街・サブカルチャーの聖地", NfcUID: "04:AB:CD:EF:06", QrToken: "akiba"},
-		{ID: 7, Name: "銀座", Description: "日本屈指の高級商業地", NfcUID: "04:AB:CD:EF:07", QrToken: "ginza"},
-		{ID: 8, Name: "六本木ヒルズ", Description: "複合エンタメ施設", NfcUID: "04:AB:CD:EF:08", QrToken: "roppongi"},
-		{ID: 9, Name: "東京スカイツリー", Description: "世界最高クラスの電波塔", NfcUID: "04:AB:CD:EF:09", QrToken: "skytree"},
+		{ID: 1, Name: "東京タワー", Description: "東京の象徴的な電波塔", Type: "food", QrToken: "tokyotower"},
+		{ID: 2, Name: "浅草寺", Description: "東京最古の寺院", Type: "activity", QrToken: "asakusa"},
+		{ID: 3, Name: "渋谷スクランブル交差点", Description: "世界有数の混雑交差点", Type: "codeflow", QrToken: "shibuya"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)
@@ -125,4 +119,48 @@ func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 	}
 	Stamps[userID] = append(Stamps[userID], stamp)
 	return &stamp, http.StatusCreated, ""
+}
+
+//----------------------------------------------------------------
+// Spot関連
+//----------------------------------------------------------------
+
+// GetSpotByNfcUID は NFC UID から SpotID を取得する関数
+// Nfcタグと対応したスポットがあるかの判定もここで行う
+func GetSpotIDByNfcUID(nfcUID string) (int, bool) {
+	spotID, exists := NfcToSpotMap[nfcUID]
+	if !exists {
+		return 0, false
+	}
+	return spotID, exists
+}
+
+// GetSpotByID は SpotID から Type を取得する関数
+func GetTypeBySpotID(spotID int) string {
+	for _, spot := range Spots {
+		if spot.ID == spotID {
+			return spot.Type
+		}
+	}
+	return ""
+}
+
+// GetSpotIDByQrToken は QrToken から SpotID を取得する関数
+func GetSpotIDByQrToken(qrToken string) (int, bool) {
+	for _, spot := range Spots {
+		if spot.QrToken == qrToken {
+			return spot.ID, true
+		}
+	}
+	return 0, false
+}
+
+// GetTypeByQrToken は QrToken から Type を取得する関数
+func GetTypeByQrToken(qrToken string) string {
+	for _, spot := range Spots {
+		if spot.QrToken == qrToken {
+			return spot.Type
+		}
+	}
+	return ""
 }

@@ -43,7 +43,7 @@ func PostStamp(c *gin.Context) {
 	c.JSON(http.StatusCreated, stamp)
 }
 
-// PostStampByNfc はNFCタグのUIDを使ってスタンプを取得するハンドラー
+// PostStampByNfcはNFCタグのUIDを使ってスタンプを取得するハンドラー
 // NFCリーダーが読み取ったUIDを受け取り、対応するスポットを特定してスタンプを付与する
 func PostStampByNfc(c *gin.Context) {
 	var req model.NfcStampRequest
@@ -52,22 +52,21 @@ func PostStampByNfc(c *gin.Context) {
 		return
 	}
 
-	// NFC UIDからスポットIDを逆引きする
-	// NFCタグにはスポットIDではなくUIDが記録されているため、Spots一覧を線形探索して対応付ける
-	spotID := 0 // 0 は「見つかっていない」ことを示す初期値（スポットIDは1始まりなので安全）
-	for _, s := range model.Spots {
-		if s.NfcUID == req.NfcUID {
-			spotID = s.ID
-			break // 見つかったらループを抜ける（無駄な処理をしない）
-		}
-	}
-
-	// spotID が 0 のままなら、そのUIDに対応するスポットが存在しない
-	if spotID == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Spot not found"})
+	// NfcUIDからSpotIDを特定
+	spotID, exsits := model.GetSpotIDByNfcUID(req.NfcUID)
+	if !exsits {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Unknouwn NFC Tag"})
 		return
 	}
 
+	// SpotIDからTypeを特定
+	spotType := model.GetTypeBySpotID(spotID)
+	if spotType == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Spot category not found"})
+		return
+	}
+
+	// スタンプ取得処理
 	stamp, status, errMsg := model.AcquireStamp(req.UserID, spotID)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
@@ -85,31 +84,19 @@ func PostStampByQr(c *gin.Context) {
 		return
 	}
 
-	// QRトークンからスポットIDを逆引きする
-	// QRトークンにはスポットIDではなく、独自トークンが記録されているため、
-	// Spots一覧を線形探索し、対応付ける
-	spotID := 0 // 0は見つかっていないことを示す初期値
-	for _, s := range model.Spots {
-		if s.QrToken == req.QrToken {
-			spotID = s.ID
-			break // 見つかったらループを抜ける
-		}
-	}
-
-	// spotIDが0のままならそのトークンに対応するスポットが存在しない
-	if spotID == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Uhyoman was here..."})
+	// QRトークンからSpotIDを取得
+	spotID, exsits := model.GetSpotIDByNfcUID(req.QrToken)
+	if !exsits {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Unknouwn NFC Tag"})
 		return
 	}
 
-	// スタンプ取得処理を呼び出す
+	// スタンプ取得処理
 	stamp, status, errMsg := model.AcquireStamp(req.UserID, spotID)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
 	}
-
-	//取得したスタンプデータをJSONとしてクライアントに返す
 	c.JSON(http.StatusCreated, stamp)
 }
 
