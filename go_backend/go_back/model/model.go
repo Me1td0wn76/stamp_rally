@@ -2,6 +2,7 @@ package model
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -12,12 +13,30 @@ import (
 // json:"..." タグは JSON のキー名を指定する（APIレスポンスに使われる）。
 // ----------------------------------------------------------------
 
+// SpotTypeはスポットの種別
+// 独自の型にしておくことで、打ち間違いを定数を使う限りコンパイル時に防げる。
+type SpotType string
+
+const (
+	SpotTypeFood     SpotType = "food"
+	SpotTypeActivity SpotType = "activity"
+	SpotTypeCodeFlow SpotType = "codeflow"
+)
+
+func (t SpotType) IsValid() bool {
+	switch t {
+	case SpotTypeFood, SpotTypeActivity, SpotTypeCodeFlow:
+		return true
+	}
+	return false
+}
+
 type Spot struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        string `json:"type"` // "food","activity","codeflow"の3種類
-	QrToken     string `json:"-"`    // QRコードに埋め込む一意の文字列(フロントエンドには返さないので json:"-" で非公開)
+	ID          int      `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Type        SpotType `json:"type"` // stringベースなため、JSONでは文字列になる
+	QrToken     string   `json:"-"`    // QRコードに埋め込む一意の文字列(フロントエンドには返さないので json:"-" で非公開)
 }
 
 type Stamp struct {
@@ -82,9 +101,15 @@ var BingoLines = [][]int{
 var (
 	Mu    sync.Mutex
 	Spots = []Spot{
-		{ID: 1, Name: "東京タワー", Description: "東京の象徴的な電波塔", Type: "food", QrToken: "tokyotower"},
-		{ID: 2, Name: "浅草寺", Description: "東京最古の寺院", Type: "activity", QrToken: "asakusa"},
-		{ID: 3, Name: "渋谷スクランブル交差点", Description: "世界有数の混雑交差点", Type: "codeflow", QrToken: "shibuya"},
+		{ID: 1, Name: "あ", Description: "a", Type: "codeflow", QrToken: "a"},
+		{ID: 2, Name: "い", Description: "b", Type: "food", QrToken: "i"},
+		{ID: 3, Name: "う", Description: "c", Type: "food", QrToken: "u"},
+		{ID: 4, Name: "え", Description: "e", Type: "food", QrToken: "e"},
+		{ID: 5, Name: "お", Description: "f", Type: "food", QrToken: "o"},
+		{ID: 6, Name: "か", Description: "g", Type: "activity", QrToken: "ka"},
+		{ID: 7, Name: "き", Description: "h", Type: "activity", QrToken: "ki"},
+		{ID: 8, Name: "く", Description: "i", Type: "activity", QrToken: "ku"},
+		{ID: 9, Name: "け", Description: "j", Type: "activity", QrToken: "ke"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)
@@ -92,14 +117,7 @@ var (
 
 // Business logic
 func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
-	validSpot := false
-	for _, spot := range Spots {
-		if spot.ID == spotID {
-			validSpot = true
-			break
-		}
-	}
-	if !validSpot {
+	if _, ok := GetSpotByID(spotID); !ok {
 		return nil, http.StatusBadRequest, "spot not found"
 	}
 
@@ -121,31 +139,42 @@ func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 	return &stamp, http.StatusCreated, ""
 }
 
-//----------------------------------------------------------------
+// ----------------------------------------------------------------
 // Spot関連
-//----------------------------------------------------------------
+// ----------------------------------------------------------------
 
-// GetSpotByNfcUID は NFC UID から SpotID を取得する関数
-// Nfcタグと対応したスポットがあるかの判定もここで行う
-func GetSpotIDByNfcUID(nfcUID string) (int, bool) {
-	spotID, exists := NfcToSpotMap[nfcUID]
-	if !exists {
-		return 0, false
-	}
-	return spotID, exists
-}
-
-// GetSpotByID は SpotID から Type を取得する関数
-func GetTypeBySpotID(spotID int) string {
+// GetSpotByID は SpotID から Spot を取得する関数
+// Spots の ID検索はここに一本化する
+// (コピーを返すことで、Spotsには影響しない)
+func GetSpotByID(id int) (*Spot, bool) {
 	for _, spot := range Spots {
-		if spot.ID == spotID {
-			return spot.Type
+		if spot.ID == id {
+			s := spot
+			return &s, true
 		}
 	}
-	return ""
+	return nil, false
+}
+
+// nfcUIDReplacer は UID の区切り文字を取り除く
+var nfcUIDReplacer = strings.NewReplacer(":", "", "-", "", " ", "")
+
+// normalizeNfcUID は UID を比較用の形式にそろえる
+// "04:ab:cd:ef:01" / "04-AB-CD-EF-01" / "04ABCDEF01" はすべて "04ABCDEF01" になる
+func normalizeNfcUID(uid string) string {
+	return strings.ToUpper(nfcUIDReplacer.Replace(uid))
+}
+
+// GetSpotIDByNfcUID は NFC UID から SpotID を取得する関数
+// Nfcタグと対応したスポットがあるかの判定もここで行う
+// 存在しないキーを引いたときのゼロ値は (0, false) なので、そのまま返してよい
+func GetSpotIDByNfcUID(nfcUID string) (int, bool) {
+	spotID, ok := nfcToSpotMap[normalizeNfcUID(nfcUID)]
+	return spotID, ok
 }
 
 // GetSpotIDByQrToken は QrToken から SpotID を取得する関数
+// [feature]SpotからQRTokenを削除し、NfcUIDと同じマッピングにした際、使用する
 func GetSpotIDByQrToken(qrToken string) (int, bool) {
 	for _, spot := range Spots {
 		if spot.QrToken == qrToken {
@@ -153,14 +182,4 @@ func GetSpotIDByQrToken(qrToken string) (int, bool) {
 		}
 	}
 	return 0, false
-}
-
-// GetTypeByQrToken は QrToken から Type を取得する関数
-func GetTypeByQrToken(qrToken string) string {
-	for _, spot := range Spots {
-		if spot.QrToken == qrToken {
-			return spot.Type
-		}
-	}
-	return ""
 }

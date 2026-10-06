@@ -1,0 +1,68 @@
+package model
+
+import (
+	"fmt"
+	"log"
+)
+
+// init はパッケージ読み込み時(サーバー起動時)に1度だけ実行される。
+// データ定義のミスをリクエストが来る前に検出するため、問題があれば panic で起動を止める。
+func init() {
+	if err := validateAndNormalize(); err != nil {
+		panic("model: invalid spot date:" + err.Error())
+	}
+}
+
+func validateAndNormalize() error {
+	// Spotの検証
+	spotIDs := make(map[int]bool)
+	qrTokens := make(map[string]int)
+	for _, s := range Spots {
+		if spotIDs[s.ID] {
+			return fmt.Errorf("duplicate spot id: %d", s.ID)
+		}
+		spotIDs[s.ID] = true
+
+		if !s.Type.IsValid() {
+			return fmt.Errorf("spot %d has invalid type: %q", s.ID, s.Type)
+		}
+		if s.QrToken == "" {
+			return fmt.Errorf("spot %d has empty qr token", s.ID)
+		}
+		if prev, dup := qrTokens[s.QrToken]; dup {
+			return fmt.Errorf("qr token %q is used by both spot %d and %d", s.QrToken, prev, s.ID)
+		}
+		qrTokens[s.QrToken] = s.ID
+	}
+
+	// NFCマップの検証 キー正規化
+	normalized := make(map[string]int, len(nfcToSpotMap))
+	for uid, spotID := range nfcToSpotMap {
+		key := normalizeNfcUID(uid)
+		if key == "" {
+			return fmt.Errorf("empty nfc uid in map (raw: %q)", uid)
+		}
+		if !spotIDs[spotID] {
+			return fmt.Errorf("nfc uid %q refers to unknown spot id: %d", uid, spotID)
+		}
+		if _, dup := normalized[key]; dup {
+			return fmt.Errorf("nfc uid %q is duplicated after normalization", uid)
+		}
+		normalized[key] = spotID
+	}
+	nfcToSpotMap = normalized
+
+	// --- UID が未登録の Spot は警告のみ ---
+	// 全タグの登録が終わったら、ここを return fmt.Errorf(...) に変えれば
+	// 「全 Spot に UID がある」ことも起動時に強制できる。
+	hasNfc := make(map[int]bool)
+	for _, id := range normalized {
+		hasNfc[id] = true
+	}
+	for _, s := range Spots {
+		if !hasNfc[s.ID] {
+			log.Printf("warning: spot %d (%s) has no NFC UID registered", s.ID, s.Name)
+		}
+	}
+	return nil
+}

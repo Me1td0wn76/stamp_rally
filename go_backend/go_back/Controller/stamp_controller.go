@@ -53,16 +53,11 @@ func PostStampByNfc(c *gin.Context) {
 	}
 
 	// NfcUIDからSpotIDを特定
-	spotID, exsits := model.GetSpotIDByNfcUID(req.NfcUID)
-	if !exsits {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Unknouwn NFC Tag"})
-		return
-	}
-
-	// SpotIDからTypeを特定
-	spotType := model.GetTypeBySpotID(spotID)
-	if spotType == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Spot category not found"})
+	// (UIDの大文字小文字・区切り文字の違いはmodel側で吸収)
+	// Spotの存在確認は、AcquireStampに任せる
+	spotID, exists := model.GetSpotIDByNfcUID(req.NfcUID)
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Unknown NFC Tag"})
 		return
 	}
 
@@ -85,9 +80,9 @@ func PostStampByQr(c *gin.Context) {
 	}
 
 	// QRトークンからSpotIDを取得
-	spotID, exsits := model.GetSpotIDByNfcUID(req.QrToken)
+	spotID, exsits := model.GetSpotIDByQrToken(req.QrToken)
 	if !exsits {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Unknouwn NFC Tag"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Unknouwn QR Code"})
 		return
 	}
 
