@@ -17,6 +17,7 @@ func validateAndNormalize() error {
 	// Spotの検証
 	spotIDs := make(map[int]bool)
 	qrTokens := make(map[string]int)
+	typeCount := make(map[SpotType]int)
 	for _, s := range Spots {
 		if spotIDs[s.ID] {
 			return fmt.Errorf("duplicate spot id: %d", s.ID)
@@ -26,6 +27,8 @@ func validateAndNormalize() error {
 		if !s.Type.IsValid() {
 			return fmt.Errorf("spot %d has invalid type: %q", s.ID, s.Type)
 		}
+		typeCount[s.Type]++
+
 		if s.QrToken == "" {
 			return fmt.Errorf("spot %d has empty qr token", s.ID)
 		}
@@ -33,6 +36,19 @@ func validateAndNormalize() error {
 			return fmt.Errorf("qr token %q is used by both spot %d and %d", s.QrToken, prev, s.ID)
 		}
 		qrTokens[s.QrToken] = s.ID
+	}
+
+	// --- ビンゴ盤面と Spot 数の整合性 ---
+	// 盤面の各 Type のマス数より Spot が少ないと、ビンゴが完成できない
+	total := 0
+	for t, slots := range bingoTypeSlots {
+		total += slots
+		if typeCount[t] < slots {
+			return fmt.Errorf("bingo card needs %d %q spots but only %d defined", slots, t, typeCount[t])
+		}
+	}
+	if total != bingoCellCount || bingoTypeSlots[SpotTypeCodeflow] != 1 {
+		return fmt.Errorf("bingoTypeSlots must total %d cells with exactly 1 codeflow (center)", bingoCellCount)
 	}
 
 	// NFCマップの検証 キー正規化

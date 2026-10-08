@@ -11,4 +11,10 @@ var nfcToSpotMap = map[string]int{
 	"04:AB:CD:EF:01": 1,
 	"04:AB:CD:EF:02": 2,
 	"04:AB:CD:EF:03": 3,
+	"04:AB:CD:EF:04": 4,
+	"04:AB:CD:EF:05": 5,
+	"04:AB:CD:EF:06": 6,
+	"04:AB:CD:EF:07": 7,
+	"04:AB:CD:EF:08": 8,
+	"04:AB:CD:EF:09": 9,
 }
