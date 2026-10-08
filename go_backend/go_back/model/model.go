@@ -77,15 +77,20 @@ type QrStampRequest struct {
 var (
 	Mu    sync.Mutex
 	Spots = []Spot{
-		{ID: 1, Name: "あ", Description: "a", Type: "codeflow", QrToken: "a"},
-		{ID: 2, Name: "い", Description: "b", Type: "food", QrToken: "i"},
-		{ID: 3, Name: "う", Description: "c", Type: "food", QrToken: "u"},
-		{ID: 4, Name: "え", Description: "e", Type: "food", QrToken: "e"},
-		{ID: 5, Name: "お", Description: "f", Type: "food", QrToken: "o"},
-		{ID: 6, Name: "か", Description: "g", Type: "activity", QrToken: "ka"},
-		{ID: 7, Name: "き", Description: "h", Type: "activity", QrToken: "ki"},
-		{ID: 8, Name: "く", Description: "i", Type: "activity", QrToken: "ku"},
-		{ID: 9, Name: "け", Description: "j", Type: "activity", QrToken: "ke"},
+		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow", QrToken: "bulbasaur"},
+		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "ivy"},
+		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "venusaur"},
+		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "charmander"},
+		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "lizard"},
+		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "charizard"},
+		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "squirtle"},
+		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "kameer"},
+		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "blastoise"},
+		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "caterpie"},
+		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "metapod"},
+		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "butterfree"},
+		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "beedle"},
+		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "cocoon"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)
