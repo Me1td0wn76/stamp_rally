@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import '../App.css'; // 共通のCSSを読み込み
-import { Activity } from 'react';
 
 const USER_ID = 'user_001';
 
@@ -13,7 +12,6 @@ const TYPE_LABEL = {
 };
 
 const Bingo = ({ navigate, currentScreen }) => {
-  const [spots, setSpots] = useState([]);
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   const [message, setMessage] = useState('');
   const [nfcSupported, setNfcSupported] = useState(false);
@@ -131,7 +129,7 @@ const Bingo = ({ navigate, currentScreen }) => {
         {/* ビンゴグリッド */}
         <div className="bingo-grid">
           {cells.map((cell) => {
-            const onBingoLine = completedLineSet.has(cells.index);
+            const onBingoLine = completedLineSet.has(cell.index);
             
             return (
               <div 

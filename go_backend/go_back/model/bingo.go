@@ -1,8 +1,8 @@
 package model
 
 import (
+	"hash/fnv"
 	"math/rand"
-	"time"
 )
 
 //----------------------------------------------------------------------
@@ -25,8 +25,11 @@ const (
 	bingoCenter    = 4
 )
 
+// bingoTypeSlots は盤面に Type が何マスあるか。
+// 各 Type の Spot 数がこの数以上ないとビンゴが完成できないため、
+// 起動時に validate.go で検証している。
 var bingoTypeSlots = map[SpotType]int{
-	SpotTypeCodeflow: 1,
+	SpotTypeCodeflow: 1, // 中央固定
 	SpotTypeFood:     4,
 	SpotTypeActivity: 4,
 }
@@ -39,7 +42,7 @@ var BingoLines = [][]int{
 	{0, 4, 8}, {2, 4, 6}, // 斜め
 }
 
-// BingoCall は盤面の1マス
+// BingoCell は盤面の1マス
 type BingoCell struct {
 	Index  int      `json:"index"`  // マス番号(0~8)
 	Type   SpotType `json:"type"`   // このマスのType
@@ -52,25 +55,21 @@ type BingoResult struct {
 	StampedIDs []int       `json:"stamped_ids"` // 取得済みスポットID一覧
 	BingoCount int         `json:"bingo_count"` // 達成済みビンゴライン数
 	BingoLines [][]int     `json:"bingo_lines"` // 達成済みラインのマス番号の一覧
-	IsComplete bool        `json:"is_complete"` // 全スポット制覇フラグ
+	IsComplete bool        `json:"is_complete"` // 9マスすべてうまっているか
 }
 
-var (
-	// ユーザーごとの盤面。Muで保護する
-	bingoCards = make(map[string][bingoCellCount]SpotType)
-	// rand.Rnad 並行利用できないため、Muを取った状態でのみ行う
-	bingoRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-)
+func bingoLayoutFor(userID string) [bingoCellCount]SpotType {
+	h := fnv.New64a()
+	h.Write([]byte(userID))
+	r := rand.New(rand.NewSource(int64(h.Sum64())))
 
-// newBingoLayout は新しい盤面を作る(Muを取った状態で呼ぶ)
-func newBingoLayout() [bingoCellCount]SpotType {
 	pool := make([]SpotType, 0, bingoCellCount-1)
 	for _, t := range []SpotType{SpotTypeFood, SpotTypeActivity} {
 		for i := 0; i < bingoTypeSlots[t]; i++ {
 			pool = append(pool, t)
 		}
 	}
-	bingoRand.Shuffle(len(pool), func(i, j int) {
+	r.Shuffle(len(pool), func(i, j int) {
 		pool[i], pool[j] = pool[j], pool[i]
 	})
 
@@ -90,14 +89,10 @@ func newBingoLayout() [bingoCellCount]SpotType {
 // GetBingoResult はユーザーのビンゴ状況を返す。
 // 盤面が未生成なら、このタイミングで生成して保持する。
 func GetBingoResult(userID string) BingoResult {
+	layout := bingoLayoutFor(userID)
+
 	Mu.Lock()
 	defer Mu.Unlock()
-
-	layout, ok := bingoCards[userID]
-	if !ok {
-		layout = newBingoLayout()
-		bingoCards[userID] = layout
-	}
 
 	// 取得済みスタンプを Type ごとに数える
 	remaining := make(map[SpotType]int)
