@@ -20,12 +20,12 @@ type SpotType string
 const (
 	SpotTypeFood     SpotType = "food"
 	SpotTypeActivity SpotType = "activity"
-	SpotTypeCodeFlow SpotType = "codeflow"
+	SpotTypeCodeflow SpotType = "codeflow"
 )
 
 func (t SpotType) IsValid() bool {
 	switch t {
-	case SpotTypeFood, SpotTypeActivity, SpotTypeCodeFlow:
+	case SpotTypeFood, SpotTypeActivity, SpotTypeCodeflow:
 		return true
 	}
 	return false
@@ -59,34 +59,10 @@ type NfcStampRequest struct {
 	NfcUID string `json:"nfc_uid" binding:"required"`
 }
 
-// QrStampRequest はQRタグ読み取りによるスタンプ取得のリクエストボディ
+// QrStampRequest はQRコード読み取りによるスタンプ取得のリクエストボディ
 type QrStampRequest struct {
 	UserID  string `json:"user_id" binding:"required"`
 	QrToken string `json:"qr_token" binding:"required"`
-}
-
-// BingoResult はビンゴ状況のレスポンス
-type BingoResult struct {
-	StampedIDs []int   `json:"stamped_ids"` // 取得済みスポットIDの一覧
-	BingoCount int     `json:"bingo_count"` // 達成済みビンゴライン数
-	BingoLines [][]int `json:"bingo_lines"` // 達成済みラインのスポットID一覧
-	IsComplete bool    `json:"is_complete"` // 全スポット制覇フラグ
-}
-
-// ----------------------------------------------------------------
-// ビンゴライン定義
-// 3x3 グリッドの spot_id 配置イメージ:
-//
-//	[1][2][3]
-//	[4][5][6]
-//	[7][8][9]
-//
-// 横3・縦3・斜め2 = 計8ライン
-// ----------------------------------------------------------------
-var BingoLines = [][]int{
-	{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, // 横
-	{1, 4, 7}, {2, 5, 8}, {3, 6, 9}, // 縦
-	{1, 5, 9}, {3, 5, 7}, // 斜め
 }
 
 // ----------------------------------------------------------------

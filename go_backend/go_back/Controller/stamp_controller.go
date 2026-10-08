@@ -117,48 +117,8 @@ func GetUserStamps(c *gin.Context) {
 }
 
 // GetBingo は指定ユーザーのビンゴ達成状況を返すハンドラー
+// 盤面の生成・判定は Typeベースで model側(bingo.go)が行う(ロックもmodel側で取る)
 func GetBingo(c *gin.Context) {
 	userID := c.Param("user_id")
-
-	model.Mu.Lock()
-	defer model.Mu.Unlock()
-
-	// 取得済みスポットIDを Set（重複なし集合）として管理する
-	// map[int]bool を使うことで「あるIDがスタンプ済みか」をO(1)で高速に判定できる
-	stampedSet := make(map[int]bool)
-	for _, s := range model.Stamps[userID] {
-		stampedSet[s.SpotID] = true
-	}
-
-	// map のキー一覧（取得済みスポットID）をスライスに変換する
-	// map はキーの順序が不定なので、毎回異なる順序になることがあるが、今回は問題なし
-	stampedIDs := make([]int, 0, len(stampedSet))
-	for id := range stampedSet {
-		stampedIDs = append(stampedIDs, id)
-	}
-
-	// ビンゴライン判定：定義された全ラインをチェックして達成済みのものを集める
-	completedLines := [][]int{}
-	for _, line := range model.BingoLines {
-		bingo := true
-		for _, id := range line {
-			// ライン内のスポットIDが1つでもスタンプ済みでなければビンゴではない
-			if !stampedSet[id] {
-				bingo = false
-				break
-			}
-		}
-		if bingo {
-			completedLines = append(completedLines, line)
-		}
-	}
-
-	// 結果をまとめてJSONで返す
-	// IsComplete は「取得済みスポット数 == 全スポット数」で全制覇を判定する
-	c.JSON(http.StatusOK, model.BingoResult{
-		StampedIDs: stampedIDs,
-		BingoCount: len(completedLines),
-		BingoLines: completedLines,
-		IsComplete: len(stampedSet) == len(model.Spots),
-	})
+	c.JSON(http.StatusOK, model.GetBingoResult(userID))
 }

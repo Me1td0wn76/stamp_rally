@@ -3,28 +3,20 @@ import '../../App.css'; // 共通のCSSを読み込み
 
 const USER_ID = 'user_001';
 
-// ビンゴグリッドの順番 (3x3, spot_id 1〜9)
-const GRID = [
-  [1, 2, 3],
-  [4, 5, 6],
-  [7, 8, 9],
-];
+const CELL_COUNT = 9;
+
+const TYPE_LABEL = {
+  food:     '飲食',
+  activity: '企画',
+  codeflow: 'Codeflow',
+};
 
 const Bingo = ({ navigate, currentScreen }) => {
-  const [spots, setSpots] = useState([]);
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   const [message, setMessage] = useState('');
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const nfcAbortRef = useRef(null);
-
-  // スポット一覧を取得
-  useEffect(() => {
-    fetch('/api/spots')
-      .then((res) => res.json())
-      .then((data) => setSpots(data))
-      .catch((err) => setMessage('スポット取得失敗: ' + err.message));
-  }, []);
 
   // ビンゴ状況を取得
   const fetchBingo = () => {
@@ -91,13 +83,18 @@ const Bingo = ({ navigate, currentScreen }) => {
     setMessage('NFCスキャンを停止しました');
   };
 
-  const stampedSet = new Set(bingo.stamped_ids ?? []);
+  // 盤面(取得前は空のマスを9個表示)
+  const cells = bingo.cells?.length
+    ? bingo.cells
+    : Array.from({length:CELL_COUNT},(_,i)=>({index:i,type:null,filled:false}));
+
+  // bingo_lines はマス番号(index)の配列
   const completedLineSet = new Set((bingo.bingo_lines ?? []).flat());
-  const spotMap = Object.fromEntries(spots.map((s) => [s.id, s]));
 
   // 進捗率の計算
-  const totalSpots = spots.length > 0 ? spots.length : 9;
-  const progressPercent = Math.min(100, (stampedSet.size / totalSpots) * 100);
+  const filledCount = cells.filter((C)=>C.filled).length;
+  const totalCells = cells.length;
+  const progressPercent = Math.min(100, (filledCount / totalCells) * 100);
 
   return (
     <div className="screen">
@@ -131,25 +128,23 @@ const Bingo = ({ navigate, currentScreen }) => {
 
         {/* ビンゴグリッド */}
         <div className="bingo-grid">
-          {GRID.flat().map((spotId) => {
-            const spot = spotMap[spotId];
-            const stamped = stampedSet.has(spotId);
-            const onBingoLine = completedLineSet.has(spotId);
+          {cells.map((cell) => {
+            const onBingoLine = completedLineSet.has(cell.index);
             
             return (
               <div 
-                key={spotId} 
-                className={`b-cell ${stamped ? 'done' : ''}`}
+                key={cell.index} 
+                className={`b-cell ${cell.filled ? 'done' : ''}`}
                 style={onBingoLine ? { borderColor: '#FF5F00', background: '#FFD900' } : {}}
               >
-                {stamped ? (
+                {cell.filled ? (
                   <div className="stamp-dot filled">
                     <svg className="check-mark" viewBox="0 0 16 16"><polyline points="3,8 7,12 13,4" /></svg>
                   </div>
                 ) : (
                   <div className="stamp-dot"></div>
                 )}
-                {spot ? spot.name : `No.${spotId}`}
+                {TYPE_LABEL[cell.type] ?? ''}
               </div>
             );
           })}
@@ -157,12 +152,12 @@ const Bingo = ({ navigate, currentScreen }) => {
 
         {/* 進捗バー */}
         <div className="progress-row">
-          <span className="progress-txt">{stampedSet.size}/{totalSpots}</span>
+          <span className="progress-txt">{filledCount}/{totalCells}</span>
           <div className="progress-bar">
             <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
           </div>
           <span className="progress-txt" style={{ color: '#FF5F00' }}>
-            {stampedSet.size >= totalSpots ? 'コンプリート!' : `あと${totalSpots - stampedSet.size}つ!`}
+            {filledCount >= totalCells ? 'コンプリート!' : `あと${totalCells - filledCount}つ!`}
           </span>
         </div>
 

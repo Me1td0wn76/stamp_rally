@@ -2,7 +2,7 @@
 # Go
 # ========================
 go_backend/bin/
-go_backend/*.exe
+go_backend/**/*.exe
 go_backend/*.exe~
 go_backend/*.dll
 go_backend/*.so
