@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      manifest(display: standalone)や apple-mobile-web-app-capable は入れないこと。
+      ホーム画面アプリとして開く設定にすると、iPhone では Cookie が Safari と別になり、
+      NFCタグ・QRコードの URL(Safari で開く)から開いたときにスタートし直しになってしまう。
+    -->
     <title>stamp_rally_front</title>
   </head>
   <body>

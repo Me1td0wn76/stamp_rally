@@ -18,8 +18,8 @@ const Manual = ({ navigate, currentScreen }) => {
         <div className="step-card">
           <div className="step-num s2">2</div>
           <div>
-            <div className="step-title">QRを読み取る</div>
-            <div className="step-desc">各会場のQRをスキャンしてスタンプをゲット！</div>
+            <div className="step-title">QR・NFCタグを読み取る</div>
+            <div className="step-desc">各会場のQRをカメラで読み取るか、NFCタグにスマホを近づけてスタンプをゲット！</div>
           </div>
         </div>
         <div className="step-card">

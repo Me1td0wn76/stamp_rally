@@ -13,6 +13,9 @@ func init() {
 	}
 }
 
+// minQrTokenLength は QrToken の最小文字数
+const minQrTokenLength = 16
+
 func validateAndNormalize() error {
 	// Spotの検証
 	spotIDs := make(map[int]bool)
@@ -31,6 +34,10 @@ func validateAndNormalize() error {
 
 		if s.QrToken == "" {
 			return fmt.Errorf("spot %d has empty qr token", s.ID)
+		}
+		// トークンを知っていれば現地に行かなくてもスタンプが取れるため、推測できない長さを必須にする
+		if len(s.QrToken) < minQrTokenLength {
+			return fmt.Errorf("qr token of spot %d is too short (min %d chars)", s.ID, minQrTokenLength)
 		}
 		if prev, dup := qrTokens[s.QrToken]; dup {
 			return fmt.Errorf("qr token %q is used by both spot %d and %d", s.QrToken, prev, s.ID)
