@@ -1,8 +1,11 @@
 package model
 
 import (
+	crand "crypto/rand"
 	"hash/fnv"
+	"math/big"
 	"math/rand"
+	"sort"
 )
 
 //----------------------------------------------------------------------
@@ -23,6 +26,9 @@ import (
 const (
 	bingoCellCount = 9
 	bingoCenter    = 4
+
+	// bingoCenterType は中央マスの Type
+	bingoCenterType = SpotTypeCodeflow
 )
 
 // bingoTypeSlots は盤面に Type が何マスあるか。
@@ -58,13 +64,26 @@ type BingoResult struct {
 	IsComplete bool        `json:"is_complete"` // 9マスすべてうまっているか
 }
 
+// bingoLayoutFor は user_id から盤面の配置（マス番号 → Type）を計算する。
+// user_id をハッシュしたものを乱数のシードにするため、結果は user_id だけで決まる
+// （同じ user_id → 同じ配置。状態を持たないのでロックも不要）。
 func bingoLayoutFor(userID string) [bingoCellCount]SpotType {
 	h := fnv.New64a()
 	h.Write([]byte(userID))
 	r := rand.New(rand.NewSource(int64(h.Sum64())))
 
+	// 中央以外の Type を名前順に並べて、配置の元になる pool を作る。
+	// map の走査順は不定なので、順序を固定しないと配置が毎回変わってしまう。
+	types := make([]SpotType, 0, len(bingoTypeSlots))
+	for t := range bingoTypeSlots {
+		if t != bingoCenterType {
+			types = append(types, t)
+		}
+	}
+	sort.Slice(types, func(i, j int) bool { return types[i] < types[j] })
+
 	pool := make([]SpotType, 0, bingoCellCount-1)
-	for _, t := range []SpotType{SpotTypeFood, SpotTypeActivity} {
+	for _, t := range types {
 		for i := 0; i < bingoTypeSlots[t]; i++ {
 			pool = append(pool, t)
 		}
@@ -77,7 +96,7 @@ func bingoLayoutFor(userID string) [bingoCellCount]SpotType {
 	k := 0
 	for i := range layout {
 		if i == bingoCenter {
-			layout[i] = SpotTypeCodeflow
+			layout[i] = bingoCenterType
 			continue
 		}
 		layout[i] = pool[k]
@@ -86,35 +105,61 @@ func bingoLayoutFor(userID string) [bingoCellCount]SpotType {
 	return layout
 }
 
+// pickBingoCell は、スタンプで埋めるマスをランダムに1つ選ぶ。
+// 同じ Type で、まだ埋まっていないマスから選ぶ。空きがなければ -1 を返す。
+// 乱数は予測できないよう crypto/rand を使う。
+// Stamps を読むので、Mu を取った状態で呼ぶこと。
+func pickBingoCell(userID string, t SpotType) (int, error) {
+	layout := bingoLayoutFor(userID)
+
+	var used [bingoCellCount]bool
+	for _, s := range Stamps[userID] {
+		if s.CellIndex >= 0 && s.CellIndex < bingoCellCount {
+			used[s.CellIndex] = true
+		}
+	}
+
+	candidates := make([]int, 0, bingoCellCount)
+	for i, cellType := range layout {
+		if cellType == t && !used[i] {
+			candidates = append(candidates, i)
+		}
+	}
+	if len(candidates) == 0 {
+		return -1, nil
+	}
+
+	n, err := crand.Int(crand.Reader, big.NewInt(int64(len(candidates))))
+	if err != nil {
+		return -1, err
+	}
+	return candidates[n.Int64()], nil
+}
+
 // GetBingoResult はユーザーのビンゴ状況を返す。
-// 盤面が未生成なら、このタイミングで生成して保持する。
+// 読み取り専用
 func GetBingoResult(userID string) BingoResult {
+	// 配置は user_id から毎回同じものが計算されるので、保存されない
 	layout := bingoLayoutFor(userID)
 
 	Mu.Lock()
 	defer Mu.Unlock()
 
-	// 取得済みスタンプを Type ごとに数える
-	remaining := make(map[SpotType]int)
+	// スタンプに保存されたマス番号から、埋まっているマスを集める
+	var filled [bingoCellCount]bool
+	filledCount := 0
 	stampedIDs := make([]int, 0, len(Stamps[userID]))
 	for _, s := range Stamps[userID] {
 		stampedIDs = append(stampedIDs, s.SpotID)
-		if spot, found := GetSpotByID(s.SpotID); found {
-			remaining[spot.Type]++
+		if s.CellIndex >= 0 && s.CellIndex < bingoCellCount && !filled[s.CellIndex] {
+			filled[s.CellIndex] = true
+			filledCount++
 		}
 	}
 
-	// 盤面の番号順に、その Type のスタンプが残っていればマスを埋める。
-	// 盤面自体がランダムなので、どのマスが埋まるかも結果的にランダムになる。
 	cells := make([]BingoCell, bingoCellCount)
-	filledCount := 0
 	for i, t := range layout {
-		filled := remaining[t] > 0
-		if filled {
-			remaining[t]--
-			filledCount++
-		}
-		cells[i] = BingoCell{Index: i, Type: t, Filled: filled}
+		cells[i] = BingoCell{Index: i, Type: t, Filled: filled[i]}
 	}
 
 	// ライン判定

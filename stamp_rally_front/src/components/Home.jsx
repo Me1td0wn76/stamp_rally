@@ -1,4 +1,4 @@
-const Home = ({ navigate, currentScreen }) => {
+const Home = ({ navigate, currentScreen, startRally }) => {
   return (
     <div className="screen">
       <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
@@ -39,7 +39,7 @@ const Home = ({ navigate, currentScreen }) => {
         </div>
       </div>
       <div style={{ flex: 1 }}></div>
-      <div className="big-btn clickable" onClick={() => navigate('bingo')}>スタート →</div>
+      <div className="big-btn clickable" onClick={startRally}>スタート →</div>
       <div className="stripe"></div>
     </div>
   );

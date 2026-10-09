@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"go_back/go_backend/go_back/model"
 	"net/http"
 
@@ -14,6 +15,30 @@ func GetSpots(c *gin.Context) {
 	// c.JSON でHTTPステータスコードとJSONデータをクライアントに返す
 	// http.StatusOK は 200 番（成功）を意味する定数
 	c.JSON(http.StatusOK, model.Spots)
+}
+
+// PostUser はユーザーIDを発行して Cookie に保存するハンドラー
+// フロントエンドのスタートボタン押下時に呼ばれる
+// IDはレスポンスボディには含めず、HttpOnly Cookie でのみ渡す
+func PostUser(c *gin.Context) {
+	// すでに登録済みIDの Cookie があればそのIDを使い続ける(スタートを何度押しても進捗が消えないように)
+	// 未登録のID(偽造・サーバー再起動前の古いID)なら新しく発行し直す
+	userID, err := c.Cookie(userCookieName)
+	if err != nil || !model.UserExists(userID) {
+		userID, err = model.CreateUser()
+		// ユーザー数が上限に達したら 503 Service Unavailable(一時的に受け付けられない)を返す
+		if errors.Is(err, model.ErrTooManyUsers) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+			return
+		}
+	}
+	// 有効期限を延長するため、既存IDの場合も書き直す
+	setUserCookie(c, userID)
+	c.Status(http.StatusNoContent)
 }
 
 // PostStamp は手動でスタンプを取得するハンドラー
@@ -32,7 +57,7 @@ func PostStamp(c *gin.Context) {
 
 	// ビジネスロジック（スタンプ取得処理）はmodelに任せる
 	// コントローラーはリクエストとレスポンスの変換だけを担当するのがGoの一般的な設計
-	stamp, status, errMsg := model.AcquireStamp(req.UserID, req.SpotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), req.SpotID)
 
 	// errMsg が空でなければ何らかのエラーが起きている（スポット不正・二重取得など）
 	if errMsg != "" {
@@ -62,7 +87,7 @@ func PostStampByNfc(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(req.UserID, spotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), spotID)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
@@ -72,6 +97,8 @@ func PostStampByNfc(c *gin.Context) {
 
 // PostStampByQr はQRコードの読み取りトークンを使ってスタンプを取得するハンドラー
 // QRコードリーダーが読み取ったトークンを受け取り、対応するスポットを特定してスタンプを付与
+// NFCタグにも同じトークン入りのURL(?spot=<トークン>)を書き込むので、URLから開いたときもこのAPIを使う
+// (iPhone はページから NFC を読めないが、タグの URL は OS が開いてくれるため)
 func PostStampByQr(c *gin.Context) {
 	var req model.QrStampRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -87,7 +114,7 @@ func PostStampByQr(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(req.UserID, spotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), spotID)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
@@ -97,9 +124,8 @@ func PostStampByQr(c *gin.Context) {
 
 // GetUserStamps は指定ユーザーの取得済みスタンプ一覧を返すハンドラー
 func GetUserStamps(c *gin.Context) {
-	// URLパラメータ（:user_id）から値を取り出す
-	// 例：/api/stamps/user123 へのリクエストなら userID = "user123"
-	userID := c.Param("user_id")
+	// RequireUser ミドルウェアが Cookie から取り出したユーザーIDを使う
+	userID := userIDFrom(c)
 
 	// 共有データ（Stamps マップ）を読む前にロックする
 	// ロックしないと、別のリクエストが同時に書き込んでいるときにデータが壊れる可能性がある
@@ -119,6 +145,5 @@ func GetUserStamps(c *gin.Context) {
 // GetBingo は指定ユーザーのビンゴ達成状況を返すハンドラー
 // 盤面の生成・判定は Typeベースで model側(bingo.go)が行う(ロックもmodel側で取る)
 func GetBingo(c *gin.Context) {
-	userID := c.Param("user_id")
-	c.JSON(http.StatusOK, model.GetBingoResult(userID))
+	c.JSON(http.StatusOK, model.GetBingoResult(userIDFrom(c)))
 }

@@ -1,0 +1,16 @@
+# Render 用の設定(Blueprint)
+# Render のダッシュボードで New > Blueprint からこのリポジトリを選ぶと、この内容でサービスが作られる
+services:
+  - type: web
+    name: stamp-rally
+    runtime: docker
+    plan: free
+    # 日本から一番近いリージョン
+    region: singapore
+    healthCheckPath: /api/spots
+    # Render 側の自動デプロイは切り、GitHub Actions(.github/workflows/deploy.yml)からだけデプロイする
+    # ("off" は引用符で囲むこと。囲まないと YAML では false として読まれる)
+    autoDeployTrigger: "off"
+    envVars:
+      - key: COOKIE_SECURE
+        value: "true"

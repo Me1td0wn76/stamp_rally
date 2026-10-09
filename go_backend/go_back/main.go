@@ -2,14 +2,13 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	// controller パッケージ：各APIエンドポイントの処理関数が定義されている
 	controller "go_back/go_backend/go_back/Controller"
-
-	// cors：ブラウザのセキュリティ機能「同一オリジンポリシー」を制御するミドルウェア
-	// フロントエンド（localhost:5173）とバックエンド（localhost:8080）は異なるオリジンなので
-	// CORS設定をしないとブラウザがAPIリクエストをブロックしてしまう
-	"github.com/gin-contrib/cors"
 
 	// gin：GoのWebフレームワーク。ルーティングやJSONレスポンスを簡単に扱える
 	"github.com/gin-gonic/gin"
@@ -20,18 +19,11 @@ func main() {
 	// gin.Default() は標準のログ出力とパニック回復機能を自動で有効にしてくれる
 	r := gin.Default()
 
-	// CORS（Cross-Origin Resource Sharing）の設定
-	// ブラウザは「異なるドメイン・ポートへのリクエスト」をデフォルトで拒否する
-	// ここでフロントエンドのオリジン（localhost:5173）からのアクセスを明示的に許可する
-	r.Use(cors.New(cors.Config{
-		// このオリジンからのリクエストのみ許可する（フロントエンドのVite開発サーバー）
-		AllowOrigins: []string{"http://localhost:5173"},
-		// 許可するHTTPメソッド。OPTIONSはブラウザが事前確認（プリフライト）に使う
-		AllowMethods: []string{"GET", "POST", "OPTIONS"},
-		// 許可するリクエストヘッダー。JSONを送るときに Content-Type が必要
-		AllowHeaders:     []string{"Content-Type"},
-		AllowCredentials: false,
-	}))
+	// CORS（Cross-Origin Resource Sharing）の設定はしない
+	// フロントエンドは Vite の proxy(本番はリバースプロキシ)を通して同じオリジンとして /api を呼ぶため、CORS は不要
+	// (以前は http://localhost:5173 だけを許可していたが、ブラウザは同一オリジンでも POST には Origin ヘッダーを付けるため、
+	//  HTTPS 化やスマホから IP で開いたときに Origin が一致せず 403 になっていた)
+	// 別オリジンからのリクエストは、ブラウザが応答を読ませず、POST には Cookie(SameSite=Lax)も付かないので安全性は変わらない
 
 	// ルートグループ：/api というプレフィックスをまとめて付けられる
 	// 例：api.GET("/spots") → 実際のURLは /api/spots になる
@@ -41,27 +33,78 @@ func main() {
 		// GET /api/spots：スポット一覧を取得する
 		api.GET("/spots", controller.GetSpots)
 
-		// POST /api/stamps：スポットIDを指定してスタンプを取得する（手動）
-		api.POST("/stamps", controller.PostStamp)
+		// POST /api/users：ユーザーIDを発行し、HttpOnly Cookie に保存する
+		api.POST("/users", controller.PostUser)
 
-		// POST /api/stamps/nfc：NFCタグのUIDを使ってスタンプを取得する
-		api.POST("/stamps/nfc", controller.PostStampByNfc)
+		// ここから下はユーザーごとのAPI
+		// RequireUser ミドルウェアが Cookie からユーザーIDを取り出す（無ければ 401）
+		user := api.Group("", controller.RequireUser())
+		{
+			// POST /api/stamps：スポットIDを指定してスタンプを取得する（手動）
+			user.POST("/stamps", controller.PostStamp)
 
-		// POST /api/stamps/qr : QRコードを使ってスタンプを取得する
-		api.POST("/stamps/qr", controller.PostStampByQr)
+			// POST /api/stamps/nfc：NFCタグのUIDを使ってスタンプを取得する
+			user.POST("/stamps/nfc", controller.PostStampByNfc)
 
-		// GET /api/stamps/:user_id：ユーザーの取得済みスタンプ一覧を返す
-		// :user_id はURLパラメータ。例：/api/stamps/user123 → user_id = "user123"
-		api.GET("/stamps/:user_id", controller.GetUserStamps)
+			// POST /api/stamps/qr : QRコードを使ってスタンプを取得する
+			user.POST("/stamps/qr", controller.PostStampByQr)
 
-		// GET /api/bingo/:user_id：ユーザーのビンゴ達成状況を返す
-		api.GET("/bingo/:user_id", controller.GetBingo)
+			// GET /api/stamps：ユーザーの取得済みスタンプ一覧を返す
+			user.GET("/stamps", controller.GetUserStamps)
+
+			// GET /api/bingo：ユーザーのビンゴ達成状況を返す
+			user.GET("/bingo", controller.GetBingo)
+		}
 	}
 
-	// サーバーを8080番ポートで起動する
+	// 本番用：環境変数 STATIC_DIR にビルド済みフロントエンド(vite build の dist)の場所が入っていれば、このサーバーから配信する
+	// 画面と API が同じオリジンになるので、リバースプロキシや CORS の設定をしなくても Cookie がそのまま使える
+	// 未設定(開発時)は今まで通り API だけを返し、画面は Vite の開発サーバーが担当する
+	if staticDir := os.Getenv("STATIC_DIR"); staticDir != "" {
+		serveFrontend(r, staticDir)
+	}
+
+	// サーバーを起動する
+	// r.Run() は引数を省略すると環境変数 PORT のポートで待ち受け、PORT が無ければ 8080 番を使う
+	// (Render などのホスティングサービスは、待ち受けるポートを PORT で渡してくる)
 	// r.Run() はサーバーが起動し続けるブロッキング処理なので、エラーが起きたときだけ終了する
 	// log.Fatalf はエラーメッセージを出力してプログラムを終了させる
-	if err := r.Run(":8080"); err != nil {
+	if err := r.Run(); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}
+}
+
+// serveFrontend は、どのルートにも当てはまらなかったリクエストに対してビルド済みフロントエンドを返す
+func serveFrontend(r *gin.Engine, dir string) {
+	fileServer := http.FileServer(http.Dir(dir))
+	indexPath := filepath.Join(dir, "index.html")
+
+	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// 存在しない API や、GET 以外のリクエストには画面ではなく 404 を返す
+		isAPI := path == "/api" || strings.HasPrefix(path, "/api/")
+		isRead := c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead
+		if isAPI || !isRead {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+
+		// 実在するファイル(JS・CSS・画像など)はそのまま返す
+		// filepath.Clean で "../" を取り除き、dir の外のファイルを読ませない
+		filePath := filepath.Join(dir, filepath.Clean("/"+path))
+		if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
+			// assets 以下はファイル名にハッシュが入り、中身が変われば名前も変わるので、長くキャッシュさせてよい
+			if strings.HasPrefix(path, "/assets/") {
+				c.Header("Cache-Control", "public, max-age=31536000, immutable")
+			}
+			fileServer.ServeHTTP(c.Writer, c.Request)
+			return
+		}
+
+		// それ以外(/ や /mock/... など)は index.html を返し、画面の切り替えは React Router に任せる
+		// index.html はデプロイのたびに読み込む JS のファイル名が変わるので、毎回サーバーに確認させる
+		c.Header("Cache-Control", "no-cache")
+		c.File(indexPath)
+	})
 }

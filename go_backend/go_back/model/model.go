@@ -1,7 +1,12 @@
 package model
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -36,32 +41,31 @@ type Spot struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Type        SpotType `json:"type"` // stringベースなため、JSONでは文字列になる
-	QrToken     string   `json:"-"`    // QRコードに埋め込む一意の文字列(フロントエンドには返さないので json:"-" で非公開)
+	QrToken string   `json:"-"`    // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)
 }
 
 type Stamp struct {
-	UserID    string    `json:"user_id"`
+	UserID    string    `json:"-"` // ユーザーIDは HttpOnly Cookie でのみ扱い、レスポンスには含めない
 	SpotID    int       `json:"spot_id"`
 	StampedAt time.Time `json:"stamped_at"` // time.Time はGoの日時型
+	CellIndex int       `json:"cell_index"` // このスタンプで埋まったビンゴのマス番号(空きがなければ-1)
 }
 
 // StampRequest は手動スタンプ取得のリクエストボディ
 // binding:"required" は Gin のバリデーション機能で、
 // フィールドが空の場合に自動的にエラーを返す
+// ユーザーIDはボディではなく Cookie で受け取る
 type StampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
-	SpotID int    `json:"spot_id" binding:"required"`
+	SpotID int `json:"spot_id" binding:"required"`
 }
 
 // NfcStampRequest はNFCタグ読み取りによるスタンプ取得のリクエストボディ
 type NfcStampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
 	NfcUID string `json:"nfc_uid" binding:"required"`
 }
 
 // QrStampRequest はQRコード読み取りによるスタンプ取得のリクエストボディ
 type QrStampRequest struct {
-	UserID  string `json:"user_id" binding:"required"`
 	QrToken string `json:"qr_token" binding:"required"`
 }
 
@@ -77,23 +81,101 @@ type QrStampRequest struct {
 var (
 	Mu    sync.Mutex
 	Spots = []Spot{
-		{ID: 1, Name: "あ", Description: "a", Type: "codeflow", QrToken: "a"},
-		{ID: 2, Name: "い", Description: "b", Type: "food", QrToken: "i"},
-		{ID: 3, Name: "う", Description: "c", Type: "food", QrToken: "u"},
-		{ID: 4, Name: "え", Description: "e", Type: "food", QrToken: "e"},
-		{ID: 5, Name: "お", Description: "f", Type: "food", QrToken: "o"},
-		{ID: 6, Name: "か", Description: "g", Type: "activity", QrToken: "ka"},
-		{ID: 7, Name: "き", Description: "h", Type: "activity", QrToken: "ki"},
-		{ID: 8, Name: "く", Description: "i", Type: "activity", QrToken: "ku"},
-		{ID: 9, Name: "け", Description: "j", Type: "activity", QrToken: "ke"},
+		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow", QrToken: "NlIOO5_wY27ntb4yQRDq7A"},
+		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw"},
+		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg"},
+		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw"},
+		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "AP_yrQaLY9PktV6fOYKWYw"},
+		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "Ag2ClMibWLo6_NMW8WWQ6A"},
+		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "7W4tCa5_zRbdeWwMyFIAww"},
+		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "MlhywvmX3nxnY7s8m6m2QQ"},
+		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "2hz4pd9sSyss1VsmkxrcPg"},
+		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "FUF96BOCZdnNDOXG-mRGGQ"},
+		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "UXDGWgbxxHapnHN3W8QYRQ"},
+		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "Q40tOe3iw4i0_HJ4lC5NCQ"},
+		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "D1FLzyudewVM4mpsgZ_ZOQ"},
+		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "2_itjHiBLUOb6QG59imk-A"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)
+	// map[string]time.Time は「ユーザーIDをキー、発行日時を値」とするマップ
+	// Mu ではなく usersMu で保護する
+	Users = make(map[string]time.Time)
+
+	// usersMu は Users 専用のロック
+	// Mu と分けることで、ユーザー発行(認証不要の POST /api/users)がスタンプの読み書きを待たせないようにする
+	// UserExists は全リクエストで呼ばれ読み取りが大半なので、複数の読み取りを同時に行える RWMutex にする
+	usersMu sync.RWMutex
 )
+
+// ----------------------------------------------------------------
+// User関連
+// ----------------------------------------------------------------
+
+// userIDBytes はユーザーIDの元になるランダムバイト数(hex化すると32文字になる)
+const userIDBytes = 16
+
+// defaultMaxUsers は MAX_USERS が未設定・不正なときのユーザー数の上限
+const defaultMaxUsers = 10000
+
+// maxUsers は発行できるユーザーIDの上限
+// POST /api/users は認証不要なので、乱発されても Users(とそのスタンプ)のメモリが際限なく増えないように頭打ちにする
+// 1ユーザーのスタンプはスポット数(14個)までなので、Users を抑えれば Stamps も抑えられる
+var maxUsers = loadMaxUsers()
+
+// loadMaxUsers は環境変数 MAX_USERS から上限を読み込む
+func loadMaxUsers() int {
+	n, err := strconv.Atoi(os.Getenv("MAX_USERS"))
+	if err != nil || n <= 0 {
+		return defaultMaxUsers
+	}
+	return n
+}
+
+// ErrTooManyUsers はユーザー数が上限に達したときのエラー
+var ErrTooManyUsers = errors.New("user limit reached")
+
+// CreateUser は新しいユーザーIDを発行して登録する
+// crypto/rand を使うことで、推測されにくいIDになる
+// 上限に達している場合は ErrTooManyUsers を返す
+func CreateUser() (string, error) {
+	usersMu.Lock()
+	defer usersMu.Unlock()
+
+	if len(Users) >= maxUsers {
+		return "", ErrTooManyUsers
+	}
+
+	for {
+		b := make([]byte, userIDBytes)
+		if _, err := rand.Read(b); err != nil {
+			return "", err
+		}
+		userID := hex.EncodeToString(b)
+		// 万が一既存IDと衝突した場合は作り直す
+		if _, exists := Users[userID]; exists {
+			continue
+		}
+		Users[userID] = time.Now()
+		return userID, nil
+	}
+}
+
+// UserExists は CreateUser で発行済みのユーザーIDかどうかを返す
+// Cookie の値はクライアントが自由に書き換えられるため、登録済みかを必ずサーバー側で確認する
+// (サーバー再起動でメモリが消えた後の古いIDもここで弾かれる)
+func UserExists(userID string) bool {
+	usersMu.RLock()
+	defer usersMu.RUnlock()
+
+	_, exists := Users[userID]
+	return exists
+}
 
 // Business logic
 func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
-	if _, ok := GetSpotByID(spotID); !ok {
+	spot, ok := GetSpotByID(spotID)
+	if !ok {
 		return nil, http.StatusBadRequest, "spot not found"
 	}
 
@@ -106,10 +188,16 @@ func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 		}
 	}
 
+	cellIndex, err := pickBingoCell(userID, spot.Type)
+	if err != nil {
+		return nil, http.StatusInternalServerError, "failed to pick bingo cell"
+	}
+
 	stamp := Stamp{
 		UserID:    userID,
 		SpotID:    spotID,
 		StampedAt: time.Now(),
+		CellIndex: cellIndex,
 	}
 	Stamps[userID] = append(Stamps[userID], stamp)
 	return &stamp, http.StatusCreated, ""

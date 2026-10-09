@@ -22,13 +22,14 @@ const Qr = ({ navigate, currentScreen }) => {
             </div>
             <div className="scan-line-mock"></div>
           </div>
-          <div className="qr-label">📷 枠内にQRを合わせてね！</div>
+          {/* QRコードにはアプリの URL(?spot=<トークン>)が入っているので、標準のカメラアプリで読めば開ける */}
+          <div className="qr-label">📷 スマホのカメラアプリで<br />会場のQRを読み取ってね！</div>
         </div>
         <div className="info-strip">
           <svg className="info-strip-icon" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round">
             <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <div className="info-strip-text">各会場のQRコードをスキャンするとスタンプがもらえます！</div>
+          <div className="info-strip-text">読み取ったURLを開くとスタンプがもらえます！NFCタグはスマホを近づけて、出てきた通知をタップしてね</div>
         </div>
         <div style={{ flex: 1 }}></div>
         <div className="big-btn outline clickable" onClick={() => navigate('bingo')}>← 戻る</div>
