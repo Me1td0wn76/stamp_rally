@@ -55,6 +55,16 @@ func main() {
 			// GET /api/bingo：ユーザーのビンゴ達成状況を返す
 			user.GET("/bingo", controller.GetBingo)
 		}
+
+		// ここから下は管理用API(環境変数 ADMIN_PASSWORD を設定したときだけ有効)
+		// ブラウザで開くとユーザー名(admin)とパスワードを聞かれる(Basic 認証)
+		if adminAuth := controller.AdminAuth(); adminAuth != nil {
+			admin := api.Group("/admin", adminAuth)
+			{
+				// GET /api/admin/staff-stamps：スタッフ別トークン(CodeFlow)で押されたスタンプの記録・スタッフごとの数を返す
+				admin.GET("/staff-stamps", controller.GetStaffStamps)
+			}
+		}
 	}
 
 	// 本番用：環境変数 STATIC_DIR にビルド済みフロントエンド(vite build の dist)の場所が入っていれば、このサーバーから配信する

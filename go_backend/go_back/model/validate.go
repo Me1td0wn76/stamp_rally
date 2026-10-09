@@ -17,9 +17,15 @@ func init() {
 const minQrTokenLength = 16
 
 func validateAndNormalize() error {
+	// スタッフ別トークン(staff.go)を使うスポット
+	staffSpots := make(map[int]bool)
+	for _, st := range staffTokens {
+		staffSpots[st.SpotID] = true
+	}
+
 	// Spots の検証
 	spotIDs := make(map[int]bool)
-	qrTokens := make(map[string]int)
+	qr := make(map[string]StampSource)
 	typeCount := make(map[SpotType]int)
 	for _, s := range Spots {
 		if spotIDs[s.ID] {
@@ -31,18 +37,38 @@ func validateAndNormalize() error {
 			return fmt.Errorf("spot %d has invalid type: %q", s.ID, s.Type)
 		}
 		typeCount[s.Type]++
-		if s.QrToken == "" {
-			return fmt.Errorf("spot %d has empty qr token", s.ID)
+
+		// スタッフ別トークンを使うスポットに共通のトークンがあると、そちらで取ったスタンプは誰が押したかわからなくなる
+		if staffSpots[s.ID] {
+			if s.QrToken != "" {
+				return fmt.Errorf("spot %d uses staff tokens, so its own qr token must be empty", s.ID)
+			}
+			continue
 		}
-		// トークンを知っていれば現地に行かなくてもスタンプが取れるため、推測できない長さを必須にする
-		if len(s.QrToken) < minQrTokenLength {
-			return fmt.Errorf("qr token of spot %d is too short (min %d chars)", s.ID, minQrTokenLength)
+		if err := addQrToken(qr, s.QrToken, StampSource{SpotID: s.ID}); err != nil {
+			return err
 		}
-		if prev, dup := qrTokens[s.QrToken]; dup {
-			return fmt.Errorf("qr token %q is used by both spot %d and %d", s.QrToken, prev, s.ID)
-		}
-		qrTokens[s.QrToken] = s.ID
 	}
+
+	// スタッフ別トークンの検証
+	staffNames := make(map[StampSource]bool)
+	for _, st := range staffTokens {
+		src := StampSource{SpotID: st.SpotID, Staff: st.Staff}
+		if !spotIDs[st.SpotID] {
+			return fmt.Errorf("staff %q refers to unknown spot id: %d", st.Staff, st.SpotID)
+		}
+		if st.Staff == "" {
+			return fmt.Errorf("staff token of spot %d has empty staff name", st.SpotID)
+		}
+		if staffNames[src] {
+			return fmt.Errorf("staff %q is duplicated in spot %d", st.Staff, st.SpotID)
+		}
+		staffNames[src] = true
+		if err := addQrToken(qr, st.QrToken, src); err != nil {
+			return err
+		}
+	}
+	qrSources = qr
 
 	// --- ビンゴ盤面と Spot 数の整合性 ---
 	// 盤面の各 Type のマス数より Spot が少ないと、ビンゴが完成できない
@@ -57,29 +83,36 @@ func validateAndNormalize() error {
 		return fmt.Errorf("bingoTypeSlots must total %d cells with exactly 1 codeflow (center)", bingoCellCount)
 	}
 
-	// NFCマップの検証 キー正規化
-	normalized := make(map[string]int, len(nfcToSpotMap))
+	// NFCマップ・スタッフの NFC UID の検証 キー正規化
+	nfc := make(map[string]StampSource, len(nfcToSpotMap)+len(staffTokens))
 	for uid, spotID := range nfcToSpotMap {
-		key := normalizeNfcUID(uid)
-		if key == "" {
-			return fmt.Errorf("empty nfc uid in map (raw: %q)", uid)
-		}
 		if !spotIDs[spotID] {
 			return fmt.Errorf("nfc uid %q refers to unknown spot id: %d", uid, spotID)
 		}
-		if _, dup := normalized[key]; dup {
-			return fmt.Errorf("nfc uid %q is duplicated after normalization", uid)
+		// スタッフ別トークンを使うスポットのタグは、staff.go の NfcUID に登録する
+		if staffSpots[spotID] {
+			return fmt.Errorf("nfc uid %q refers to spot %d, which uses staff tokens (register it as NfcUID in staff.go)", uid, spotID)
 		}
-		normalized[key] = spotID
+		if err := addNfcUID(nfc, uid, StampSource{SpotID: spotID}); err != nil {
+			return err
+		}
 	}
-	nfcToSpotMap = normalized
+	for _, st := range staffTokens {
+		if st.NfcUID == "" {
+			continue
+		}
+		if err := addNfcUID(nfc, st.NfcUID, StampSource{SpotID: st.SpotID, Staff: st.Staff}); err != nil {
+			return err
+		}
+	}
+	nfcSources = nfc
 
 	// --- UID が未登録の Spot は警告のみ ---
 	// 全タグの登録が終わったら、ここを return fmt.Errorf(...) に変えれば
 	// 「全 Spot に UID がある」ことも起動時に強制できる。
 	hasNfc := make(map[int]bool)
-	for _, id := range normalized {
-		hasNfc[id] = true
+	for _, src := range nfc {
+		hasNfc[src.SpotID] = true
 	}
 	for _, s := range Spots {
 		if !hasNfc[s.ID] {
@@ -87,4 +120,41 @@ func validateAndNormalize() error {
 		}
 	}
 	return nil
+}
+
+// addQrToken は QR トークンを表に追加する(空・短すぎる・重複しているトークンはエラー)
+func addQrToken(sources map[string]StampSource, token string, src StampSource) error {
+	if token == "" {
+		return fmt.Errorf("%s has empty qr token", describeSource(src))
+	}
+	// トークンを知っていれば現地に行かなくてもスタンプが取れるため、推測できない長さを必須にする
+	if len(token) < minQrTokenLength {
+		return fmt.Errorf("qr token of %s is too short (min %d chars)", describeSource(src), minQrTokenLength)
+	}
+	if prev, dup := sources[token]; dup {
+		return fmt.Errorf("qr token %q is used by both %s and %s", token, describeSource(prev), describeSource(src))
+	}
+	sources[token] = src
+	return nil
+}
+
+// addNfcUID は NFC UID を正規化して表に追加する(空・重複している UID はエラー)
+func addNfcUID(sources map[string]StampSource, uid string, src StampSource) error {
+	key := normalizeNfcUID(uid)
+	if key == "" {
+		return fmt.Errorf("empty nfc uid of %s (raw: %q)", describeSource(src), uid)
+	}
+	if _, dup := sources[key]; dup {
+		return fmt.Errorf("nfc uid %q is duplicated after normalization", uid)
+	}
+	sources[key] = src
+	return nil
+}
+
+// describeSource はエラーメッセージ用に、スポット(とスタッフ)を表す文字列を返す
+func describeSource(src StampSource) string {
+	if src.Staff == "" {
+		return fmt.Sprintf("spot %d", src.SpotID)
+	}
+	return fmt.Sprintf("spot %d staff %q", src.SpotID, src.Staff)
 }

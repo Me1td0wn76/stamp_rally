@@ -57,7 +57,8 @@ func PostStamp(c *gin.Context) {
 
 	// ビジネスロジック（スタンプ取得処理）はmodelに任せる
 	// コントローラーはリクエストとレスポンスの変換だけを担当するのがGoの一般的な設計
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), req.SpotID)
+	// (スポットIDだけでは誰が押したかわからないので、スタッフは空になる)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), model.StampSource{SpotID: req.SpotID})
 
 	// errMsg が空でなければ何らかのエラーが起きている（スポット不正・二重取得など）
 	if errMsg != "" {
@@ -77,17 +78,17 @@ func PostStampByNfc(c *gin.Context) {
 		return
 	}
 
-	// NfcUIDからSpotIDを特定
+	// NfcUIDからSpotID(スタッフのタグならスタッフも)を特定
 	// (UIDの大文字小文字・区切り文字の違いはmodel側で吸収)
 	// Spotの存在確認は、AcquireStampに任せる
-	spotID, exists := model.GetSpotIDByNfcUID(req.NfcUID)
+	src, exists := model.ResolveNfcUID(req.NfcUID)
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Unknown NFC Tag"})
 		return
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), spotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
@@ -106,15 +107,15 @@ func PostStampByQr(c *gin.Context) {
 		return
 	}
 
-	// QRトークンからSpotIDを取得
-	spotID, exsits := model.GetSpotIDByQrToken(req.QrToken)
+	// QRトークンからSpotID(スタッフ別トークンならスタッフも)を取得
+	src, exsits := model.ResolveQrToken(req.QrToken)
 	if !exsits {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Unknouwn QR Code"})
 		return
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), spotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
