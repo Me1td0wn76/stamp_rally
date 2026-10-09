@@ -6,11 +6,6 @@ import (
 	// controller パッケージ：各APIエンドポイントの処理関数が定義されている
 	controller "go_back/go_backend/go_back/Controller"
 
-	// cors：ブラウザのセキュリティ機能「同一オリジンポリシー」を制御するミドルウェア
-	// フロントエンド（localhost:5173）とバックエンド（localhost:8080）は異なるオリジンなので
-	// CORS設定をしないとブラウザがAPIリクエストをブロックしてしまう
-	"github.com/gin-contrib/cors"
-
 	// gin：GoのWebフレームワーク。ルーティングやJSONレスポンスを簡単に扱える
 	"github.com/gin-gonic/gin"
 )
@@ -20,18 +15,11 @@ func main() {
 	// gin.Default() は標準のログ出力とパニック回復機能を自動で有効にしてくれる
 	r := gin.Default()
 
-	// CORS（Cross-Origin Resource Sharing）の設定
-	// ブラウザは「異なるドメイン・ポートへのリクエスト」をデフォルトで拒否する
-	// ここでフロントエンドのオリジン（localhost:5173）からのアクセスを明示的に許可する
-	r.Use(cors.New(cors.Config{
-		// このオリジンからのリクエストのみ許可する（フロントエンドのVite開発サーバー）
-		AllowOrigins: []string{"http://localhost:5173"},
-		// 許可するHTTPメソッド。OPTIONSはブラウザが事前確認（プリフライト）に使う
-		AllowMethods: []string{"GET", "POST", "OPTIONS"},
-		// 許可するリクエストヘッダー。JSONを送るときに Content-Type が必要
-		AllowHeaders:     []string{"Content-Type"},
-		AllowCredentials: false,
-	}))
+	// CORS（Cross-Origin Resource Sharing）の設定はしない
+	// フロントエンドは Vite の proxy(本番はリバースプロキシ)を通して同じオリジンとして /api を呼ぶため、CORS は不要
+	// (以前は http://localhost:5173 だけを許可していたが、ブラウザは同一オリジンでも POST には Origin ヘッダーを付けるため、
+	//  HTTPS 化やスマホから IP で開いたときに Origin が一致せず 403 になっていた)
+	// 別オリジンからのリクエストは、ブラウザが応答を読ませず、POST には Cookie(SameSite=Lax)も付かないので安全性は変わらない
 
 	// ルートグループ：/api というプレフィックスをまとめて付けられる
 	// 例：api.GET("/spots") → 実際のURLは /api/spots になる

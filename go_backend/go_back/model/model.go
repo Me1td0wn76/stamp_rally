@@ -41,14 +41,14 @@ type Spot struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Type        SpotType `json:"type"` // stringベースなため、JSONでは文字列になる
-	QrToken     string   `json:"-"`    // QRコードに埋め込む一意の文字列(フロントエンドには返さないので json:"-" で非公開)
+	QrToken     string   `json:"-"`    // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)
 }
 
 type Stamp struct {
 	UserID    string    `json:"-"` // ユーザーIDは HttpOnly Cookie でのみ扱い、レスポンスには含めない
 	SpotID    int       `json:"spot_id"`
-	StampedAt time.Time `json:"stamped_at"`  // time.Time はGoの日時型
-	CellIndex int       `json::"cell_index"` // このスタンプで埋まったビンゴのマス番号(空きがなければ-1)
+	StampedAt time.Time `json:"stamped_at"` // time.Time はGoの日時型
+	CellIndex int       `json:"cell_index"` // このスタンプで埋まったビンゴのマス番号(空きがなければ-1)
 }
 
 // StampRequest は手動スタンプ取得のリクエストボディ
@@ -56,16 +56,19 @@ type Stamp struct {
 // フィールドが空の場合に自動的にエラーを返す
 // ユーザーIDはボディではなく Cookie で受け取る
 type StampRequest struct {
-	SpotID int `json:"spot_id" binding:"required"`
+	UserID string `json:"user_id" binding:"required"`
+	SpotID int    `json:"spot_id" binding:"required"`
 }
 
 // NfcStampRequest はNFCタグ読み取りによるスタンプ取得のリクエストボディ
 type NfcStampRequest struct {
+	UserID string `json:"user_id" binding:"required"`
 	NfcUID string `json:"nfc_uid" binding:"required"`
 }
 
 // QrStampRequest はQRコード読み取りによるスタンプ取得のリクエストボディ
 type QrStampRequest struct {
+	UserID  string `json:"user_id" binding:"required"`
 	QrToken string `json:"qr_token" binding:"required"`
 }
 
@@ -81,20 +84,20 @@ type QrStampRequest struct {
 var (
 	Mu    sync.Mutex
 	Spots = []Spot{
-		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow", QrToken: "bulbasaur"},
-		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "ivy"},
-		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "venusaur"},
-		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "charmander"},
-		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "lizard"},
-		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "charizard"},
-		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "squirtle"},
-		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "kameer"},
-		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "blastoise"},
-		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "caterpie"},
-		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "metapod"},
-		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "butterfree"},
-		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "beedle"},
-		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "cocoon"},
+		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow", QrToken: "NlIOO5_wY27ntb4yQRDq7A"},
+		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw"},
+		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg"},
+		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw"},
+		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "AP_yrQaLY9PktV6fOYKWYw"},
+		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "Ag2ClMibWLo6_NMW8WWQ6A"},
+		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "7W4tCa5_zRbdeWwMyFIAww"},
+		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "MlhywvmX3nxnY7s8m6m2QQ"},
+		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "2hz4pd9sSyss1VsmkxrcPg"},
+		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "FUF96BOCZdnNDOXG-mRGGQ"},
+		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "UXDGWgbxxHapnHN3W8QYRQ"},
+		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "Q40tOe3iw4i0_HJ4lC5NCQ"},
+		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "D1FLzyudewVM4mpsgZ_ZOQ"},
+		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "2_itjHiBLUOb6QG59imk-A"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)

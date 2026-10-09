@@ -5,8 +5,24 @@ import Qr from "./components/Qr";
 import Prize from "./components/Prize";
 import Manual from "./components/Manual";
 
+// NFCタグ・QRコードには https://<ドメイン>/?spot=<トークン> のURLが入っている
+// (iPhone はページから NFC を読めないが、タグに書かれた URL は OS が読み取って開いてくれる)
+// URL からトークンを取り出し、再読み込みで二重に送らないよう URL からは消しておく
+// StrictMode ではコンポーネント内の初期化処理が2回呼ばれ、2回目は消した後の URL を読んでしまうため、モジュール読み込み時に1度だけ行う
+function takeSpotTokenFromUrl() {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get('spot');
+  if (token === null) return null;
+  url.searchParams.delete('spot');
+  window.history.replaceState(null, '', url);
+  return token || null;
+}
+const initialSpotToken = takeSpotTokenFromUrl();
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState('bingo');
+  // まだ送っていないスポットのトークン（未スタートならスタート後に送る）
+  const [pendingSpotToken, setPendingSpotToken] = useState(initialSpotToken);
   // スタート処理中かどうか(二重送信防止用)
   // state だと再レンダー前の連打で両方が false を読んでしまうため、即座に反映される ref を使う
   const startingRef = useRef(false);
@@ -40,7 +56,15 @@ function App() {
 
   return (
     <div className="phone">
-      {currentScreen === 'bingo' && <Bingo navigate={navigate} startRally={startRally} />}
+      {currentScreen === 'bingo' && (
+        <Bingo
+          navigate={navigate}
+          currentScreen={currentScreen}
+          startRally={startRally}
+          pendingSpotToken={pendingSpotToken}
+          clearPendingSpotToken={() => setPendingSpotToken(null)}
+        />
+      )}
       {currentScreen === 'qr' && <Qr navigate={navigate} currentScreen={currentScreen} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} currentScreen={currentScreen} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} currentScreen={currentScreen} />}
