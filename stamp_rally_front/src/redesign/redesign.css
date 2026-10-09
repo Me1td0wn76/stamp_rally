@@ -318,7 +318,7 @@
    ================================================================= */
 .rd-er { align-items: center; text-align: center; gap: 8px; padding: 18px 16px; }
 .rd-er h2 { font-size: 21px; }
-.rd-er .rd-er-msg { font-size: 12px; font-weight: 700; color: #7A5E6E; overflow-wrap: anywhere; }
+.rd-er .rd-er-msg { font-size: 14px; font-weight: 700; color: var(--ink2); overflow-wrap: anywhere; }
 .rd-er-art { position: relative; width: 200px; height: 170px; flex: none; }
 .rd-er-art > * { position: absolute; }
 .rd-er-art svg { display: block; width: 100%; height: 100%; overflow: visible; }
@@ -419,6 +419,8 @@
 .rd-guide-dots { display: flex; gap: 6px; }
 .rd-guide-dots span { width: 8px; height: 8px; background: var(--kraft2); }
 .rd-guide-dots span.is-on { width: 22px; background: var(--orange); }
+/* 「はじめる」に失敗したときの文（説明文の min-height は付けない） */
+.rd-guide .rd-guide-err { min-height: 0; padding: 8px 10px; background: var(--paper2); border-left: 4px solid var(--orange); font-size: 13px; font-weight: 900; color: var(--orange2); }
 /* 背の低い画面ではカードを詰めて、あごの間に収める（はみ出してもカードはあごより上に重なる） */
 @media (max-height: 720px) {
   .rd-pk { padding-top: 90px; padding-bottom: 110px; }

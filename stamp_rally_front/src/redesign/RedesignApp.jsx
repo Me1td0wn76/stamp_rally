@@ -13,6 +13,7 @@ import Loader from './Loader.jsx';
 // 隠しミニゲームは見つけたときに初めて読み込む（ふだんの読み込みを増やさないため）
 const WitchGame = lazy(() => import('./WitchGame.jsx'));
 import { Night } from './parts.jsx';
+import { NETWORK_ERROR, errorMessage } from '../api/errors';
 
 // デザインの作り直し。画面の切り替え・スタート・URL からのスタンプ取得は今の App.jsx と同じ仕組み。
 // 見た目は切り絵のかぼちゃ（夜空の上に紙を切って貼ったような画面）。後ろでは星・こうもり・おばけなどが動く。画面の移動はかぼちゃのメニュー（AssistiveTouch）から。
@@ -60,6 +61,8 @@ function RedesignApp() {
   // スタート処理中かどうか(二重送信防止用)
   // state だと再レンダー前の連打で両方が false を読んでしまうため、即座に反映される ref を使う
   const startingRef = useRef(false);
+  // スタートに失敗したときに遊び方の最後のページに出す文（失敗していなければ空）
+  const [startError, setStartError] = useState('');
 
   // 画面遷移用の関数
   const navigate = (screenName) => {
@@ -78,6 +81,7 @@ function RedesignApp() {
   const [guideFirst, setGuideFirst] = useState(true);
   const openGuide = () => {
     setGuideFirst(false);
+    setStartError('');
     setGuideOpen(true);
   };
   // スタートしたら、ビンゴ画面にビンゴ状況を取り直してもらう
@@ -94,12 +98,16 @@ function RedesignApp() {
 
   // 遊び方の「はじめる」押下時の処理
   // サーバーがユーザーIDを HttpOnly Cookie で発行する(発行済みならそのまま使われる)
-  // 成功したらビンゴ画面へ遷移して true を返す
+  // 成功したらビンゴ画面へ遷移して true を返す。失敗したら遊び方の最後のページに理由を出して false を返す
   const startRally = async () => {
     if (startingRef.current) return false;
     startingRef.current = true;
+    setStartError('');
+    // 通信できなかったときは NETWORK_ERROR のまま
+    let status = NETWORK_ERROR;
     try {
       const res = await fetch('/api/users', { method: 'POST' });
+      status = res.status;
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? '不明なエラー');
@@ -107,7 +115,8 @@ function RedesignApp() {
       navigate('bingo');
       return true;
     } catch (err) {
-      alert('はじめられませんでした: ' + err.message);
+      console.error('スタート失敗:', err);
+      setStartError(errorMessage(status));
       return false;
     } finally {
       startingRef.current = false;
@@ -143,7 +152,7 @@ function RedesignApp() {
           </Suspense>
         )}
         {/* 遊び方はロード画面が消え始めてから出す（カードが出てくる動きを見せるため） */}
-        {guideOpen && boot !== 'booting' && <Guide onClose={closeGuide} onStart={startFromGuide} closable={!guideFirst} />}
+        {guideOpen && boot !== 'booting' && <Guide onClose={closeGuide} onStart={startFromGuide} startError={startError} closable={!guideFirst} />}
         {boot !== 'done' && (
           <div className={`rd-boot${boot === 'leaving' ? ' is-leaving' : ''}`}>
             <Loader size="full" />
