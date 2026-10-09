@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import '../App.css'; // 共通のCSSを読み込み
+import { postStamp } from '../api/stamps';
 
 const CELL_COUNT = 9;
+
+// Web NFC 非対応(iPhone など)のときの案内
+// タグに書かれた URL は OS が読み取って通知を出し、タップするとこのアプリが ?spot=<トークン> 付きで開く
+const NFC_URL_GUIDE = 'NFCタグにスマホを近づけると通知が出ます。通知をタップするとスタンプが付きます';
 
 const TYPE_LABEL = {
   food:     '飲食',
@@ -9,7 +14,7 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
-const Bingo = ({ navigate, currentScreen, startRally }) => {
+const Bingo = ({ navigate, currentScreen, startRally, pendingSpotToken, clearPendingSpotToken }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
   // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
@@ -18,6 +23,8 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const nfcAbortRef = useRef(null);
+  // 送信済みのスポットトークン(StrictMode で effect が2回走っても1回だけ送るため)
+  const sentSpotTokenRef = useRef(null);
 
   // NFCスキャンを止める(NDEFReader の読み取りを AbortController で中断する)
   const abortNfcScan = useCallback(() => {
@@ -71,28 +78,42 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
   };
 
   // スタンプ取得（共通）
-  const acquireStamp = async (body) => {
-    const res = await fetch('/api/stamps/nfc', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.status === 201) {
-      setMessage('スタンプを取得しました！');
-      fetchBingo();
-    } else if (res.status === 401) {
+  // kind: 'nfc' | 'qr'(送信先は postStamp を参照)。レスポンスのステータスを返す
+  const acquireStamp = useCallback(async (kind, body) => {
+    const { status, message } = await postStamp(kind, body);
+    if (status === 401) {
       handleUnauthorized();
-    } else if (res.status === 409) {
-      setMessage('このスポットはすでにスタンプ済みです');
-    } else {
-      setMessage('エラー: ' + (data.error ?? '不明なエラー'));
+      return status;
     }
-  };
+    setMessage(message);
+    if (status === 201) fetchBingo();
+    return status;
+  }, [fetchBingo, handleUnauthorized]);
+
+  // NFCタグ・QRコードの URL から開いたとき:スタート済みならトークンを送ってスタンプを取得する
+  // 未スタート(401)ならトークンは残しておき、スタートして started が true になったら送り直す
+  useEffect(() => {
+    if (started !== true || !pendingSpotToken) return;
+    if (sentSpotTokenRef.current === pendingSpotToken) return;
+    sentSpotTokenRef.current = pendingSpotToken;
+
+    (async () => {
+      const status = await acquireStamp('qr', { qr_token: pendingSpotToken });
+      if (status === 401) {
+        sentSpotTokenRef.current = null;
+      } else {
+        clearPendingSpotToken();
+      }
+    })();
+  }, [started, pendingSpotToken, acquireStamp, clearPendingSpotToken]);
 
   // NFCスキャン開始
   const startNfcScan = async () => {
-    if (!nfcSupported) return;
+    // Web NFC 非対応(iPhone など)では、タグの URL を OS に開いてもらう方法を案内する
+    if (!nfcSupported) {
+      setMessage(NFC_URL_GUIDE);
+      return;
+    }
     try {
       const ndef = new window.NDEFReader();
       const controller = new AbortController();
@@ -106,7 +127,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
         // シリアルナンバー（UID）をコロン区切り大文字に正規化
         const uid = serialNumber.toUpperCase().replace(/-/g, ':');
         setMessage(`NFCタグ検出: ${uid}`);
-        acquireStamp({ nfc_uid: uid });
+        acquireStamp('nfc', { nfc_uid: uid });
       });
     } catch (err) {
       setMessage('NFCスキャン失敗: ' + err.message);
@@ -137,7 +158,11 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
               ? <>ℹ️ {message}</>
               : started === null
                 ? '読み込み中…'
-                : <>スタートボタンを押すと<br />ビンゴカードが表示されます</>}
+                : pendingSpotToken
+                  // NFCタグ・QRコードの URL から開いたが未スタートのとき
+                  // 別のブラウザでスタートしていると Cookie が別なので、ここでは未スタート扱いになる
+                  ? <>スタートするとスタンプが付きます<br /><br />別のブラウザでスタートした人は、<br />そのブラウザでもう一度開いてください</>
+                  : <>スタートボタンを押すと<br />ビンゴカードが表示されます</>}
           </div>
           {started === false && (
             <div className="big-btn clickable" onClick={handleStart}>スタート →</div>
@@ -188,7 +213,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
           )}
           {!nfcSupported && (
             <div style={{ color: '#FF2D8B', fontSize: '9px', fontWeight: '800', textAlign: 'center', marginTop: '4px' }}>
-              ※ この端末・ブラウザはWeb NFCに未対応です
+              ※ NFCタグにスマホを近づけて、出てきた通知をタップしてね
             </div>
           )}
         </div>

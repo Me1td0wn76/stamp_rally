@@ -2,10 +2,7 @@ module go_back/go_backend
 
 go 1.26.3
 
-require (
-	github.com/gin-contrib/cors v1.3.1
-	github.com/gin-gonic/gin v1.12.0
-)
+require github.com/gin-gonic/gin v1.12.0
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect

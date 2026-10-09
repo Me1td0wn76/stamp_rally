@@ -97,6 +97,8 @@ func PostStampByNfc(c *gin.Context) {
 
 // PostStampByQr はQRコードの読み取りトークンを使ってスタンプを取得するハンドラー
 // QRコードリーダーが読み取ったトークンを受け取り、対応するスポットを特定してスタンプを付与
+// NFCタグにも同じトークン入りのURL(?spot=<トークン>)を書き込むので、URLから開いたときもこのAPIを使う
+// (iPhone はページから NFC を読めないが、タグの URL は OS が開いてくれるため)
 func PostStampByQr(c *gin.Context) {
 	var req model.QrStampRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
