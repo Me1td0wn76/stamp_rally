@@ -1,13 +1,12 @@
 import { useState, useRef } from 'react';
 import './App.css';
-import Home from "./components/Home";
 import Bingo from "./components/Bingo";
 import Qr from "./components/Qr";
 import Prize from "./components/Prize";
 import Manual from "./components/Manual";
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState('home');
+  const [currentScreen, setCurrentScreen] = useState('bingo');
   // スタート処理中かどうか(二重送信防止用)
   // state だと再レンダー前の連打で両方が false を読んでしまうため、即座に反映される ref を使う
   const startingRef = useRef(false);
@@ -41,18 +40,11 @@ function App() {
 
   return (
     <div className="phone">
-      {currentScreen === 'home' && <Home navigate={navigate} currentScreen={currentScreen} startRally={startRally} />}
-      {currentScreen === 'bingo' && <Bingo navigate={navigate} currentScreen={currentScreen} startRally={startRally} />}
+      {currentScreen === 'bingo' && <Bingo navigate={navigate} startRally={startRally} />}
       {currentScreen === 'qr' && <Qr navigate={navigate} currentScreen={currentScreen} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} currentScreen={currentScreen} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} currentScreen={currentScreen} />}
       <div className="tab-bar">
-        <div className={`tab-item clickable ${currentScreen === 'home' ? 'active' : ''}`} onClick={() => navigate('home')}>
-          <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-          ホーム
-        </div>
         <div className={`tab-item clickable ${currentScreen === 'bingo' ? 'active' : ''}`} onClick={() => navigate('bingo')}>
           <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />

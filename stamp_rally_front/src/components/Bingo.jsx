@@ -9,7 +9,7 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
-const Bingo = ({ navigate, currentScreen, startRally }) => {
+const Bingo = ({ navigate, startRally }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
   // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
@@ -127,7 +127,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
       <div className="screen">
         <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
         <div className="nav-bar" style={{ background: '#FFD900' }}>
-          <div className="nav-back clickable" onClick={() => navigate('home')}>‹ ホーム</div>
+          <div style={{ width: '36px' }}></div>
           <div className="nav-title">ビンゴカード</div>
           <div style={{ width: '36px' }}></div>
         </div>
@@ -167,7 +167,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
     <div className="screen">
       <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
       <div className="nav-bar" style={{ background: '#FFD900' }}>
-        <div className="nav-back clickable" onClick={() => navigate('home')}>‹ ホーム</div>
+        <div style={{ width: '36px' }}></div>
         <div className="nav-title">ビンゴカード</div>
         <div style={{ width: '36px' }}></div>
       </div>
