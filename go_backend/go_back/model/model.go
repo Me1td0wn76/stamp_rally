@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -41,14 +42,21 @@ type Spot struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Type        SpotType `json:"type"` // stringベースなため、JSONでは文字列になる
-	QrToken string   `json:"-"`    // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)
+	QrToken string   `json:"-"`    // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)。スタッフ別トークン(staff.go)を使うスポットは空にする
 }
 
 type Stamp struct {
 	UserID    string    `json:"-"` // ユーザーIDは HttpOnly Cookie でのみ扱い、レスポンスには含めない
 	SpotID    int       `json:"spot_id"`
+	Staff     string    `json:"-"`          // スタンプを押したスタッフ(スタッフ別トークンで取ったときだけ入る。確認は管理用 API で行うので、ユーザーには返さない)
 	StampedAt time.Time `json:"stamped_at"` // time.Time はGoの日時型
 	CellIndex int       `json:"cell_index"` // このスタンプで埋まったビンゴのマス番号(空きがなければ-1)
+}
+
+// StampSource は、読み取ったトークン・UID から分かる「どのスポットで・誰が」押したスタンプか
+type StampSource struct {
+	SpotID int
+	Staff  string // スタッフ別トークン(staff.go)のときだけ入る。それ以外は空
 }
 
 // StampRequest は手動スタンプ取得のリクエストボディ
@@ -81,7 +89,8 @@ type QrStampRequest struct {
 var (
 	Mu    sync.Mutex
 	Spots = []Spot{
-		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow", QrToken: "NlIOO5_wY27ntb4yQRDq7A"},
+		// コードフローは誰が押したかを記録するため、スポット共通のトークンは持たず、スタッフ別トークン(staff.go)だけで取る
+		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow"},
 		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw"},
 		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg"},
 		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw"},
@@ -173,8 +182,9 @@ func UserExists(userID string) bool {
 }
 
 // Business logic
-func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
-	spot, ok := GetSpotByID(spotID)
+// src.Staff(スタッフ別トークンで取ったときだけ入る)はスタンプに記録する
+func AcquireStamp(userID string, src StampSource) (*Stamp, int, string) {
+	spot, ok := GetSpotByID(src.SpotID)
 	if !ok {
 		return nil, http.StatusBadRequest, "spot not found"
 	}
@@ -183,7 +193,7 @@ func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 	defer Mu.Unlock()
 
 	for _, s := range Stamps[userID] {
-		if s.SpotID == spotID {
+		if s.SpotID == src.SpotID {
 			return nil, http.StatusConflict, "stamp already acquired"
 		}
 	}
@@ -195,11 +205,18 @@ func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 
 	stamp := Stamp{
 		UserID:    userID,
-		SpotID:    spotID,
+		SpotID:    src.SpotID,
+		Staff:     src.Staff,
 		StampedAt: time.Now(),
 		CellIndex: cellIndex,
 	}
 	Stamps[userID] = append(Stamps[userID], stamp)
+
+	// スタッフ別トークンで取ったスタンプはサーバーログにも残す
+	// (メモリ上の記録はサーバーを再起動すると消えるが、ログは残る)
+	if src.Staff != "" {
+		log.Printf("staff stamp: spot=%d(%s) staff=%q", spot.ID, spot.Name, src.Staff)
+	}
 	return &stamp, http.StatusCreated, ""
 }
 
@@ -229,21 +246,23 @@ func normalizeNfcUID(uid string) string {
 	return strings.ToUpper(nfcUIDReplacer.Replace(uid))
 }
 
-// GetSpotIDByNfcUID は NFC UID から SpotID を取得する関数
+// qrSources・nfcSources は、トークン・UID から「どのスポットで・誰が」押したスタンプかを引く表
+// Spots の QrToken・nfcToSpotMap(map.go)・staffTokens(staff.go)をまとめたもので、起動時に validate.go が作る
+var (
+	qrSources  map[string]StampSource // QR トークン → スタンプの出どころ
+	nfcSources map[string]StampSource // 正規化した NFC UID → スタンプの出どころ
+)
+
+// ResolveNfcUID は NFC UID から、どのスポットで・誰が押したスタンプかを取得する関数
 // Nfcタグと対応したスポットがあるかの判定もここで行う
-// 存在しないキーを引いたときのゼロ値は (0, false) なので、そのまま返してよい
-func GetSpotIDByNfcUID(nfcUID string) (int, bool) {
-	spotID, ok := nfcToSpotMap[normalizeNfcUID(nfcUID)]
-	return spotID, ok
+// 存在しないキーを引いたときのゼロ値は (StampSource{}, false) なので、そのまま返してよい
+func ResolveNfcUID(nfcUID string) (StampSource, bool) {
+	src, ok := nfcSources[normalizeNfcUID(nfcUID)]
+	return src, ok
 }
 
-// GetSpotIDByQrToken は QrToken から SpotID を取得する関数
-// [feature]SpotからQRTokenを削除し、NfcUIDと同じマッピングにした際、使用する
-func GetSpotIDByQrToken(qrToken string) (int, bool) {
-	for _, spot := range Spots {
-		if spot.QrToken == qrToken {
-			return spot.ID, true
-		}
-	}
-	return 0, false
+// ResolveQrToken は QrToken から、どのスポットで・誰が押したスタンプかを取得する関数
+func ResolveQrToken(qrToken string) (StampSource, bool) {
+	src, ok := qrSources[qrToken]
+	return src, ok
 }

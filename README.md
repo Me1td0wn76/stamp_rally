@@ -62,6 +62,7 @@ stamp_rally
 │           ├───model.go     スポット一覧・ユーザー・スタンプ
 │           ├───bingo.go     ビンゴ盤面の生成・判定
 │           ├───map.go       NFC タグ UID → スポット ID の対応表
+│           ├───staff.go     CodeFlow のスタッフ別トークン・記録の集計
 │           └───validate.go  起動時のデータ整合性チェック
 └───stamp_rally_front     フロントエンド (React + Vite)
     ├───public
@@ -80,15 +81,19 @@ stamp_rally
 | GET | `/api/spots` | スポット一覧を取得 |
 | POST | `/api/users` | ユーザー ID を発行し Cookie に保存 |
 | POST 🔒 | `/api/stamps` | スポット ID を指定してスタンプ取得 (`{"spot_id": 1}`) |
-| POST 🔒 | `/api/stamps/nfc` | NFC タグの UID でスタンプ取得 (`{"nfc_uid": "04:AB:CD:EF:01"}`) |
+| POST 🔒 | `/api/stamps/nfc` | NFC タグの UID でスタンプ取得 (`{"nfc_uid": "04:AB:CD:EF:02"}`) |
 | POST 🔒 | `/api/stamps/qr` | QR コードのトークンでスタンプ取得 (`{"qr_token": "..."}`) |
 | GET 🔒 | `/api/stamps` | 取得済みスタンプ一覧 |
 | GET 🔒 | `/api/bingo` | ビンゴの盤面・達成状況 |
+| GET 🔑 | `/api/admin/staff-stamps` | CodeFlow のスタンプをどのスタッフが押したかの記録・スタッフごとの数(管理用) |
+
+🔑 は管理用 API。環境変数 `ADMIN_PASSWORD` を設定したときだけ有効で、Basic 認証(ユーザー名 `admin`、パスワードは `ADMIN_PASSWORD`)がかかります。
 
 ## スポット・NFC タグの登録
 
 - スポット(店舗)は [model.go](go_backend/go_back/model/model.go) の `Spots` に定義します
 - NFC タグの UID とスポットの対応は [map.go](go_backend/go_back/model/map.go) に登録します
+- CodeFlow のスタッフ別トークン(と、スタッフのタグの UID)は [staff.go](go_backend/go_back/model/staff.go) に登録します(下の「CodeFlow のスタッフ別 URL」を参照)
 - 起動時に [validate.go](go_backend/go_back/model/validate.go) が ID や QR トークンの重複、ビンゴに必要なスポット数などをチェックし、問題があれば起動を止めます(UID 未登録のスポットは警告のみ)
 
 ## 環境変数(バックエンド)
@@ -97,8 +102,10 @@ stamp_rally
 |---|---|---|
 | `MAX_USERS` | 発行できるユーザー数の上限 | 10000 |
 | `COOKIE_SECURE` | Cookie の Secure 属性。`true` / `false` で固定、未設定ならリクエストが HTTPS かどうかで判定 | 未設定 |
+| `ADMIN_PASSWORD` | 管理用 API のパスワード。未設定・16 文字未満なら管理用 API は無効 | 未設定 |
 
 本番(HTTPS)では `COOKIE_SECURE=true` の設定を推奨します。
+`ADMIN_PASSWORD` はリポジトリに書かず、Render のダッシュボード(Environment)で設定します。
 
 ## 実行方法
 ### バックエンド
@@ -127,7 +134,7 @@ npm run dev
 開発サーバーは自己署名証明書の HTTPS で起動する。スマホ(同じ Wi-Fi)からは `https://<PCのIP>:5173` で開き、証明書の警告を許可して進む。
 
 ## NFCタグ・QRコードの準備
-NFCタグと QR コードには、どちらも次の URL を入れる(`<トークン>` は `go_back/model/model.go` の Spots にある、そのスポットの `QrToken`)。
+NFCタグと QR コードには、どちらも次の URL を入れる(`<トークン>` は `go_back/model/model.go` の Spots にある、そのスポットの `QrToken`。CodeFlow だけはスタッフごとのトークンを使う。下の「CodeFlow のスタッフ別 URL」を参照)。
 ```
 https://<ドメイン>/?spot=<トークン>
 ```
@@ -149,6 +156,19 @@ NFCタグ(NTAG213 など)への書き込み手順
 - トークンを知っていれば現地に行かなくてもスタンプが取れるため、リポジトリは非公開にしておくこと
 - トークンを変えると、そのスポットのタグ・QR は書き直しになる
 - 通知から開いたブラウザと、スタートしたブラウザが違うと Cookie が別になり、スタートし直しになる(iPhone は Safari で遊ぶよう案内する)
+
+### CodeFlow のスタッフ別 URL
+CodeFlow(ビンゴ中央のマス)のスタンプは、誰が押したか(QR・NFCタグを出したスタッフ)を記録するため、スタッフごとに別のトークンを使う。
+URL の形はほかのスポットと同じ `https://<ドメイン>/?spot=<トークン>` で、`<トークン>` に [staff.go](go_backend/go_back/model/staff.go) の `staffTokens` にある、そのスタッフの `QrToken` を入れる。
+
+- CodeFlow にはスポット共通のトークンが無く、スタッフのトークンでしか取れない(共通のトークンや map.go の UID を CodeFlow に登録すると起動時にエラーになる)
+- スタッフを追加するときは `staffTokens` に 1 行足し、トークンは上と同じコマンドで生成する。スタッフ名は重複不可
+- アプリの NFC 読み込み画面(Android)で読ませるタグは、そのスタッフの `NfcUID` に UID を登録する
+- スタッフ名は記録の表示に使うだけなので、あとから変えてもよい。トークンを変えるとそのスタッフのタグ・QR は書き直しになる
+
+記録の確認
+- 管理用 API:`ADMIN_PASSWORD` を設定したうえで `https://<ドメイン>/api/admin/staff-stamps` をブラウザで開き、ユーザー名 `admin` とパスワードを入れる。`counts` がスタッフごとの数、`stamps` が 1 回ずつの記録(新しい順)。`staff` が空の行は、手動 API(`POST /api/stamps`)で取ったスタッフ不明のもの
+- サーバーログ:スタンプが押されるたびに `staff stamp: spot=1(コードフロー) staff="..."` が出る。メモリ上の記録はサーバーを再起動すると消えるが、ログは Render のダッシュボード(Logs)に残る
 
 ブラウザで http://localhost:5173 を開きます。`/api` へのリクエストは Vite の開発サーバーがバックエンド(localhost:8080)へプロキシします。
 
