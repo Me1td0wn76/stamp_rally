@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import './App.css';
 import Home from "./components/Home";
 import Bingo from "./components/Bingo";
@@ -8,7 +8,9 @@ import Manual from "./components/Manual";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('home');
-  const [starting, setStarting] = useState(false);
+  // スタート処理中かどうか(二重送信防止用)
+  // state だと再レンダー前の連打で両方が false を読んでしまうため、即座に反映される ref を使う
+  const startingRef = useRef(false);
 
   // 画面遷移用の関数
   const navigate = (screenName) => {
@@ -19,8 +21,8 @@ function App() {
   // サーバーがユーザーIDを HttpOnly Cookie で発行する(発行済みならそのまま使われる)
   // 成功したらビンゴ画面へ遷移して true を返す
   const startRally = async () => {
-    if (starting) return false;
-    setStarting(true);
+    if (startingRef.current) return false;
+    startingRef.current = true;
     try {
       const res = await fetch('/api/users', { method: 'POST' });
       if (!res.ok) {
@@ -33,7 +35,7 @@ function App() {
       alert('スタートに失敗しました: ' + err.message);
       return false;
     } finally {
-      setStarting(false);
+      startingRef.current = false;
     }
   };
 
