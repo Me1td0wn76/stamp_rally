@@ -41,7 +41,7 @@ type Spot struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Type        SpotType `json:"type"` // stringベースなため、JSONでは文字列になる
-	QrToken     string   `json:"-"`    // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)
+	QrToken string   `json:"-"`    // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)
 }
 
 type Stamp struct {
@@ -56,19 +56,16 @@ type Stamp struct {
 // フィールドが空の場合に自動的にエラーを返す
 // ユーザーIDはボディではなく Cookie で受け取る
 type StampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
-	SpotID int    `json:"spot_id" binding:"required"`
+	SpotID int `json:"spot_id" binding:"required"`
 }
 
 // NfcStampRequest はNFCタグ読み取りによるスタンプ取得のリクエストボディ
 type NfcStampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
 	NfcUID string `json:"nfc_uid" binding:"required"`
 }
 
 // QrStampRequest はQRコード読み取りによるスタンプ取得のリクエストボディ
 type QrStampRequest struct {
-	UserID  string `json:"user_id" binding:"required"`
 	QrToken string `json:"qr_token" binding:"required"`
 }
 
