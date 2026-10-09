@@ -16,15 +16,22 @@ func GetSpots(c *gin.Context) {
 	c.JSON(http.StatusOK, model.Spots)
 }
 
-// PostUser は新しいユーザーIDを発行するハンドラー
-// フロントエンドのスタートボタン押下時に呼ばれ、発行したIDはフロント側で保持する
+// PostUser はユーザーIDを発行して Cookie に保存するハンドラー
+// フロントエンドのスタートボタン押下時に呼ばれる
+// IDはレスポンスボディには含めず、HttpOnly Cookie でのみ渡す
 func PostUser(c *gin.Context) {
-	userID, err := model.CreateUser()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
-		return
+	// すでに Cookie があればそのIDを使い続ける(スタートを何度押しても進捗が消えないように)
+	userID, err := c.Cookie(userCookieName)
+	if err != nil || userID == "" {
+		userID, err = model.CreateUser()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+			return
+		}
 	}
-	c.JSON(http.StatusCreated, gin.H{"user_id": userID})
+	// 有効期限を延長するため、既存IDの場合も書き直す
+	setUserCookie(c, userID)
+	c.Status(http.StatusNoContent)
 }
 
 // PostStamp は手動でスタンプを取得するハンドラー
@@ -43,7 +50,7 @@ func PostStamp(c *gin.Context) {
 
 	// ビジネスロジック（スタンプ取得処理）はmodelに任せる
 	// コントローラーはリクエストとレスポンスの変換だけを担当するのがGoの一般的な設計
-	stamp, status, errMsg := model.AcquireStamp(req.UserID, req.SpotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), req.SpotID)
 
 	// errMsg が空でなければ何らかのエラーが起きている（スポット不正・二重取得など）
 	if errMsg != "" {
@@ -73,7 +80,7 @@ func PostStampByNfc(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(req.UserID, spotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), spotID)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
@@ -98,7 +105,7 @@ func PostStampByQr(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(req.UserID, spotID)
+	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), spotID)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
@@ -108,9 +115,8 @@ func PostStampByQr(c *gin.Context) {
 
 // GetUserStamps は指定ユーザーの取得済みスタンプ一覧を返すハンドラー
 func GetUserStamps(c *gin.Context) {
-	// URLパラメータ（:user_id）から値を取り出す
-	// 例：/api/stamps/user123 へのリクエストなら userID = "user123"
-	userID := c.Param("user_id")
+	// RequireUser ミドルウェアが Cookie から取り出したユーザーIDを使う
+	userID := userIDFrom(c)
 
 	// 共有データ（Stamps マップ）を読む前にロックする
 	// ロックしないと、別のリクエストが同時に書き込んでいるときにデータが壊れる可能性がある
@@ -130,6 +136,5 @@ func GetUserStamps(c *gin.Context) {
 // GetBingo は指定ユーザーのビンゴ達成状況を返すハンドラー
 // 盤面の生成・判定は Typeベースで model側(bingo.go)が行う(ロックもmodel側で取る)
 func GetBingo(c *gin.Context) {
-	userID := c.Param("user_id")
-	c.JSON(http.StatusOK, model.GetBingoResult(userID))
+	c.JSON(http.StatusOK, model.GetBingoResult(userIDFrom(c)))
 }

@@ -42,7 +42,7 @@ type Spot struct {
 }
 
 type Stamp struct {
-	UserID    string    `json:"user_id"`
+	UserID    string    `json:"-"` // ユーザーIDは HttpOnly Cookie でのみ扱い、レスポンスには含めない
 	SpotID    int       `json:"spot_id"`
 	StampedAt time.Time `json:"stamped_at"` // time.Time はGoの日時型
 }
@@ -50,20 +50,18 @@ type Stamp struct {
 // StampRequest は手動スタンプ取得のリクエストボディ
 // binding:"required" は Gin のバリデーション機能で、
 // フィールドが空の場合に自動的にエラーを返す
+// ユーザーIDはボディではなく Cookie で受け取る
 type StampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
-	SpotID int    `json:"spot_id" binding:"required"`
+	SpotID int `json:"spot_id" binding:"required"`
 }
 
 // NfcStampRequest はNFCタグ読み取りによるスタンプ取得のリクエストボディ
 type NfcStampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
 	NfcUID string `json:"nfc_uid" binding:"required"`
 }
 
 // QrStampRequest はQRコード読み取りによるスタンプ取得のリクエストボディ
 type QrStampRequest struct {
-	UserID  string `json:"user_id" binding:"required"`
 	QrToken string `json:"qr_token" binding:"required"`
 }
 

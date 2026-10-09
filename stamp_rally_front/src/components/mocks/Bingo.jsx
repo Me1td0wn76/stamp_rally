@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import '../../App.css'; // 共通のCSSを読み込み
 
-const USER_ID = 'user_001';
-
 const CELL_COUNT = 9;
 
 const TYPE_LABEL = {
@@ -20,7 +18,7 @@ const Bingo = ({ navigate, currentScreen }) => {
 
   // ビンゴ状況を取得
   const fetchBingo = () => {
-    fetch(`/api/bingo/${USER_ID}`)
+    fetch('/api/bingo')
       .then((res) => res.json())
       .then((data) => setBingo(data))
       .catch((err) => setMessage('ビンゴ状況取得失敗: ' + err.message));
@@ -65,7 +63,7 @@ const Bingo = ({ navigate, currentScreen }) => {
         // シリアルナンバー（UID）をコロン区切り大文字に正規化
         const uid = serialNumber.toUpperCase().replace(/-/g, ':');
         setMessage(`NFCタグ検出: ${uid}`);
-        acquireStamp({ user_id: USER_ID, nfc_uid: uid });
+        acquireStamp({ nfc_uid: uid });
       });
     } catch (err) {
       setMessage('NFCスキャン失敗: ' + err.message);

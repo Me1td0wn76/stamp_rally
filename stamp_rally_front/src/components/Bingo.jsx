@@ -9,29 +9,42 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
-const Bingo = ({ navigate, currentScreen, userId, startRally }) => {
+const Bingo = ({ navigate, currentScreen, startRally }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
+  // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
+  // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
+  const [started, setStarted] = useState(null);
   const [message, setMessage] = useState('');
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const nfcAbortRef = useRef(null);
 
   // ビンゴ状況を取得
-  const fetchBingo = useCallback(() => {
-    fetch(`/api/bingo/${encodeURIComponent(userId)}`)
-      .then((res) => res.json())
-      .then((data) => setBingo(data))
-      .catch((err) => setMessage('ビンゴ状況取得失敗: ' + err.message));
-  }, [userId]);
-
-  useEffect(() => {
-    setNfcSupported('NDEFReader' in window);
+  const fetchBingo = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bingo');
+      if (res.status === 401) {
+        setStarted(false);
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? '不明なエラー');
+      setBingo(data);
+      setStarted(true);
+    } catch (err) {
+      setMessage('ビンゴ状況取得失敗: ' + err.message);
+    }
   }, []);
 
-  // ユーザーIDが発行済みのときだけビンゴ状況を取得する
   useEffect(() => {
-    if (userId) fetchBingo();
-  }, [userId, fetchBingo]);
+    fetchBingo();
+    setNfcSupported('NDEFReader' in window);
+  }, [fetchBingo]);
+
+  // スタートボタン押下時:ユーザーIDを発行してからビンゴ状況を取り直す
+  const handleStart = async () => {
+    if (await startRally()) fetchBingo();
+  };
 
   // スタンプ取得（共通）
   const acquireStamp = async (body) => {
@@ -44,6 +57,8 @@ const Bingo = ({ navigate, currentScreen, userId, startRally }) => {
     if (res.status === 201) {
       setMessage('スタンプを取得しました！');
       fetchBingo();
+    } else if (res.status === 401) {
+      setStarted(false);
     } else if (res.status === 409) {
       setMessage('このスポットはすでにスタンプ済みです');
     } else {
@@ -67,7 +82,7 @@ const Bingo = ({ navigate, currentScreen, userId, startRally }) => {
         // シリアルナンバー（UID）をコロン区切り大文字に正規化
         const uid = serialNumber.toUpperCase().replace(/-/g, ':');
         setMessage(`NFCタグ検出: ${uid}`);
-        acquireStamp({ user_id: userId, nfc_uid: uid });
+        acquireStamp({ nfc_uid: uid });
       });
     } catch (err) {
       setMessage('NFCスキャン失敗: ' + err.message);
@@ -85,8 +100,9 @@ const Bingo = ({ navigate, currentScreen, userId, startRally }) => {
     setMessage('NFCスキャンを停止しました');
   };
 
-  // ユーザーIDが未発行の場合はビンゴカードを表示せず、スタートボタンを表示する
-  if (!userId) {
+  // スタート前・確認中はビンゴカードを表示しない
+  // 未スタートならスタートボタンを表示する
+  if (!started) {
     return (
       <div className="screen">
         <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
@@ -97,9 +113,15 @@ const Bingo = ({ navigate, currentScreen, userId, startRally }) => {
         </div>
         <div style={{ background: '#FAFAFA', flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#111' }}>
-            スタートボタンを押すと<br />ビンゴカードが表示されます
+            {message
+              ? <>ℹ️ {message}</>
+              : started === null
+                ? '読み込み中…'
+                : <>スタートボタンを押すと<br />ビンゴカードが表示されます</>}
           </div>
-          <div className="big-btn clickable" onClick={startRally}>スタート →</div>
+          {started === false && (
+            <div className="big-btn clickable" onClick={handleStart}>スタート →</div>
+          )}
         </div>
       </div>
     );

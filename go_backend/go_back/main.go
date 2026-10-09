@@ -41,24 +41,28 @@ func main() {
 		// GET /api/spots：スポット一覧を取得する
 		api.GET("/spots", controller.GetSpots)
 
-		// POST /api/users：新しいユーザーIDを発行する
+		// POST /api/users：ユーザーIDを発行し、HttpOnly Cookie に保存する
 		api.POST("/users", controller.PostUser)
 
-		// POST /api/stamps：スポットIDを指定してスタンプを取得する（手動）
-		api.POST("/stamps", controller.PostStamp)
+		// ここから下はユーザーごとのAPI
+		// RequireUser ミドルウェアが Cookie からユーザーIDを取り出す（無ければ 401）
+		user := api.Group("", controller.RequireUser())
+		{
+			// POST /api/stamps：スポットIDを指定してスタンプを取得する（手動）
+			user.POST("/stamps", controller.PostStamp)
 
-		// POST /api/stamps/nfc：NFCタグのUIDを使ってスタンプを取得する
-		api.POST("/stamps/nfc", controller.PostStampByNfc)
+			// POST /api/stamps/nfc：NFCタグのUIDを使ってスタンプを取得する
+			user.POST("/stamps/nfc", controller.PostStampByNfc)
 
-		// POST /api/stamps/qr : QRコードを使ってスタンプを取得する
-		api.POST("/stamps/qr", controller.PostStampByQr)
+			// POST /api/stamps/qr : QRコードを使ってスタンプを取得する
+			user.POST("/stamps/qr", controller.PostStampByQr)
 
-		// GET /api/stamps/:user_id：ユーザーの取得済みスタンプ一覧を返す
-		// :user_id はURLパラメータ。例：/api/stamps/user123 → user_id = "user123"
-		api.GET("/stamps/:user_id", controller.GetUserStamps)
+			// GET /api/stamps：ユーザーの取得済みスタンプ一覧を返す
+			user.GET("/stamps", controller.GetUserStamps)
 
-		// GET /api/bingo/:user_id：ユーザーのビンゴ達成状況を返す
-		api.GET("/bingo/:user_id", controller.GetBingo)
+			// GET /api/bingo：ユーザーのビンゴ達成状況を返す
+			user.GET("/bingo", controller.GetBingo)
+		}
 	}
 
 	// サーバーを8080番ポートで起動する
