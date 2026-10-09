@@ -19,12 +19,30 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
   const [nfcScanning, setNfcScanning] = useState(false);
   const nfcAbortRef = useRef(null);
 
+  // NFCスキャンを止める(NDEFReader の読み取りを AbortController で中断する)
+  const abortNfcScan = useCallback(() => {
+    if (nfcAbortRef.current) {
+      nfcAbortRef.current.abort();
+      nfcAbortRef.current = null;
+    }
+    setNfcScanning(false);
+  }, []);
+
+  // 401(未スタート・IDが無効)を受けたときの処理
+  // スキャンを止めないとタグをかざすたびに 401 のリクエストが飛び続けるので、ここで止める
+  // メッセージが残っていると「スタートボタンを押すと…」が隠れるため、メッセージも消す
+  const handleUnauthorized = useCallback(() => {
+    abortNfcScan();
+    setMessage('');
+    setStarted(false);
+  }, [abortNfcScan]);
+
   // ビンゴ状況を取得
   const fetchBingo = useCallback(async () => {
     try {
       const res = await fetch('/api/bingo');
       if (res.status === 401) {
-        setStarted(false);
+        handleUnauthorized();
         return;
       }
       const data = await res.json();
@@ -34,7 +52,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
     } catch (err) {
       setMessage('ビンゴ状況取得失敗: ' + err.message);
     }
-  }, []);
+  }, [handleUnauthorized]);
 
   useEffect(() => {
     fetchBingo();
@@ -64,7 +82,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
       setMessage('スタンプを取得しました！');
       fetchBingo();
     } else if (res.status === 401) {
-      setStarted(false);
+      handleUnauthorized();
     } else if (res.status === 409) {
       setMessage('このスポットはすでにスタンプ済みです');
     } else {
@@ -98,11 +116,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
 
   // NFCスキャン停止
   const stopNfcScan = () => {
-    if (nfcAbortRef.current) {
-      nfcAbortRef.current.abort();
-      nfcAbortRef.current = null;
-    }
-    setNfcScanning(false);
+    abortNfcScan();
     setMessage('NFCスキャンを停止しました');
   };
 
