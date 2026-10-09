@@ -1,7 +1,12 @@
 package model
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -40,7 +45,7 @@ type Spot struct {
 }
 
 type Stamp struct {
-	UserID    string    `json:"user_id"`
+	UserID    string    `json:"-"` // ユーザーIDは HttpOnly Cookie でのみ扱い、レスポンスには含めない
 	SpotID    int       `json:"spot_id"`
 	StampedAt time.Time `json:"stamped_at"` // time.Time はGoの日時型
 }
@@ -48,20 +53,18 @@ type Stamp struct {
 // StampRequest は手動スタンプ取得のリクエストボディ
 // binding:"required" は Gin のバリデーション機能で、
 // フィールドが空の場合に自動的にエラーを返す
+// ユーザーIDはボディではなく Cookie で受け取る
 type StampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
-	SpotID int    `json:"spot_id" binding:"required"`
+	SpotID int `json:"spot_id" binding:"required"`
 }
 
 // NfcStampRequest はNFCタグ読み取りによるスタンプ取得のリクエストボディ
 type NfcStampRequest struct {
-	UserID string `json:"user_id" binding:"required"`
 	NfcUID string `json:"nfc_uid" binding:"required"`
 }
 
 // QrStampRequest はQRコード読み取りによるスタンプ取得のリクエストボディ
 type QrStampRequest struct {
-	UserID  string `json:"user_id" binding:"required"`
 	QrToken string `json:"qr_token" binding:"required"`
 }
 
@@ -94,7 +97,79 @@ var (
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)
+	// map[string]time.Time は「ユーザーIDをキー、発行日時を値」とするマップ
+	// Mu ではなく usersMu で保護する
+	Users = make(map[string]time.Time)
+
+	// usersMu は Users 専用のロック
+	// Mu と分けることで、ユーザー発行(認証不要の POST /api/users)がスタンプの読み書きを待たせないようにする
+	// UserExists は全リクエストで呼ばれ読み取りが大半なので、複数の読み取りを同時に行える RWMutex にする
+	usersMu sync.RWMutex
 )
+
+// ----------------------------------------------------------------
+// User関連
+// ----------------------------------------------------------------
+
+// userIDBytes はユーザーIDの元になるランダムバイト数(hex化すると32文字になる)
+const userIDBytes = 16
+
+// defaultMaxUsers は MAX_USERS が未設定・不正なときのユーザー数の上限
+const defaultMaxUsers = 10000
+
+// maxUsers は発行できるユーザーIDの上限
+// POST /api/users は認証不要なので、乱発されても Users(とそのスタンプ)のメモリが際限なく増えないように頭打ちにする
+// 1ユーザーのスタンプはスポット数(14個)までなので、Users を抑えれば Stamps も抑えられる
+var maxUsers = loadMaxUsers()
+
+// loadMaxUsers は環境変数 MAX_USERS から上限を読み込む
+func loadMaxUsers() int {
+	n, err := strconv.Atoi(os.Getenv("MAX_USERS"))
+	if err != nil || n <= 0 {
+		return defaultMaxUsers
+	}
+	return n
+}
+
+// ErrTooManyUsers はユーザー数が上限に達したときのエラー
+var ErrTooManyUsers = errors.New("user limit reached")
+
+// CreateUser は新しいユーザーIDを発行して登録する
+// crypto/rand を使うことで、推測されにくいIDになる
+// 上限に達している場合は ErrTooManyUsers を返す
+func CreateUser() (string, error) {
+	usersMu.Lock()
+	defer usersMu.Unlock()
+
+	if len(Users) >= maxUsers {
+		return "", ErrTooManyUsers
+	}
+
+	for {
+		b := make([]byte, userIDBytes)
+		if _, err := rand.Read(b); err != nil {
+			return "", err
+		}
+		userID := hex.EncodeToString(b)
+		// 万が一既存IDと衝突した場合は作り直す
+		if _, exists := Users[userID]; exists {
+			continue
+		}
+		Users[userID] = time.Now()
+		return userID, nil
+	}
+}
+
+// UserExists は CreateUser で発行済みのユーザーIDかどうかを返す
+// Cookie の値はクライアントが自由に書き換えられるため、登録済みかを必ずサーバー側で確認する
+// (サーバー再起動でメモリが消えた後の古いIDもここで弾かれる)
+func UserExists(userID string) bool {
+	usersMu.RLock()
+	defer usersMu.RUnlock()
+
+	_, exists := Users[userID]
+	return exists
+}
 
 // Business logic
 func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {

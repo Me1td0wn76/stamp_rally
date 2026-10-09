@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import '../../App.css'; // 共通のCSSを読み込み
-
-const USER_ID = 'user_001';
 
 const CELL_COUNT = 9;
 
@@ -11,6 +9,14 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
+// ユーザーIDを発行してもらう(HttpOnly Cookie に保存される)
+// モック画面にはスタートの流れが無いため、401 を受けたらこれを呼んで自動で登録する
+// 発行済みの有効なIDがあればサーバーはそれを使い続けるので、進捗は消えない
+const registerUser = async () => {
+  const res = await fetch('/api/users', { method: 'POST' });
+  if (!res.ok) throw new Error('ユーザー登録失敗');
+};
+
 const Bingo = ({ navigate, currentScreen }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   const [message, setMessage] = useState('');
@@ -18,26 +24,44 @@ const Bingo = ({ navigate, currentScreen }) => {
   const [nfcScanning, setNfcScanning] = useState(false);
   const nfcAbortRef = useRef(null);
 
-  // ビンゴ状況を取得
-  const fetchBingo = () => {
-    fetch(`/api/bingo/${USER_ID}`)
-      .then((res) => res.json())
-      .then((data) => setBingo(data))
-      .catch((err) => setMessage('ビンゴ状況取得失敗: ' + err.message));
-  };
+  // ビンゴ状況を取得(401 なら登録してから1回だけ取り直す)
+  const fetchBingo = useCallback(async () => {
+    try {
+      let res = await fetch('/api/bingo');
+      if (res.status === 401) {
+        await registerUser();
+        res = await fetch('/api/bingo');
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? '不明なエラー');
+      setBingo(data);
+    } catch (err) {
+      setMessage('ビンゴ状況取得失敗: ' + err.message);
+    }
+  }, []);
 
   useEffect(() => {
     fetchBingo();
     setNfcSupported('NDEFReader' in window);
-  }, []);
+  }, [fetchBingo]);
 
-  // スタンプ取得（共通）
+  // スタンプ取得（共通）(401 なら登録してから1回だけ送り直す)
   const acquireStamp = async (body) => {
-    const res = await fetch('/api/stamps/nfc', {
+    const postStamp = () => fetch('/api/stamps/nfc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    let res = await postStamp();
+    if (res.status === 401) {
+      try {
+        await registerUser();
+      } catch (err) {
+        setMessage('エラー: ' + err.message);
+        return;
+      }
+      res = await postStamp();
+    }
     const data = await res.json();
     if (res.status === 201) {
       setMessage('スタンプを取得しました！');
@@ -65,7 +89,7 @@ const Bingo = ({ navigate, currentScreen }) => {
         // シリアルナンバー（UID）をコロン区切り大文字に正規化
         const uid = serialNumber.toUpperCase().replace(/-/g, ':');
         setMessage(`NFCタグ検出: ${uid}`);
-        acquireStamp({ user_id: USER_ID, nfc_uid: uid });
+        acquireStamp({ nfc_uid: uid });
       });
     } catch (err) {
       setMessage('NFCスキャン失敗: ' + err.message);

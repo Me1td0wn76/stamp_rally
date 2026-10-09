@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import '../App.css'; // 共通のCSSを読み込み
-
-const USER_ID = 'user_001';
 
 const CELL_COUNT = 9;
 
@@ -11,25 +9,66 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
-const Bingo = ({ navigate, currentScreen }) => {
+const Bingo = ({ navigate, currentScreen, startRally }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
+  // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
+  // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
+  const [started, setStarted] = useState(null);
   const [message, setMessage] = useState('');
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const nfcAbortRef = useRef(null);
 
+  // NFCスキャンを止める(NDEFReader の読み取りを AbortController で中断する)
+  const abortNfcScan = useCallback(() => {
+    if (nfcAbortRef.current) {
+      nfcAbortRef.current.abort();
+      nfcAbortRef.current = null;
+    }
+    setNfcScanning(false);
+  }, []);
+
+  // 401(未スタート・IDが無効)を受けたときの処理
+  // スキャンを止めないとタグをかざすたびに 401 のリクエストが飛び続けるので、ここで止める
+  // メッセージが残っていると「スタートボタンを押すと…」が隠れるため、メッセージも消す
+  const handleUnauthorized = useCallback(() => {
+    abortNfcScan();
+    setMessage('');
+    setStarted(false);
+  }, [abortNfcScan]);
+
   // ビンゴ状況を取得
-  const fetchBingo = () => {
-    fetch(`/api/bingo/${USER_ID}`)
-      .then((res) => res.json())
-      .then((data) => setBingo(data))
-      .catch((err) => setMessage('ビンゴ状況取得失敗: ' + err.message));
-  };
+  const fetchBingo = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bingo');
+      if (res.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? '不明なエラー');
+      setBingo(data);
+      setStarted(true);
+    } catch (err) {
+      setMessage('ビンゴ状況取得失敗: ' + err.message);
+    }
+  }, [handleUnauthorized]);
 
   useEffect(() => {
     fetchBingo();
     setNfcSupported('NDEFReader' in window);
-  }, []);
+  }, [fetchBingo]);
+
+  // スタートボタン押下時:ユーザーIDを発行してからビンゴ状況を取り直す
+  const handleStart = async () => {
+    if (await startRally()) fetchBingo();
+  };
+
+  // 再読み込みボタン押下時:エラー表示を消して(「読み込み中…」に戻して)取り直す
+  const handleRetry = () => {
+    setMessage('');
+    fetchBingo();
+  };
 
   // スタンプ取得（共通）
   const acquireStamp = async (body) => {
@@ -42,6 +81,8 @@ const Bingo = ({ navigate, currentScreen }) => {
     if (res.status === 201) {
       setMessage('スタンプを取得しました！');
       fetchBingo();
+    } else if (res.status === 401) {
+      handleUnauthorized();
     } else if (res.status === 409) {
       setMessage('このスポットはすでにスタンプ済みです');
     } else {
@@ -65,7 +106,7 @@ const Bingo = ({ navigate, currentScreen }) => {
         // シリアルナンバー（UID）をコロン区切り大文字に正規化
         const uid = serialNumber.toUpperCase().replace(/-/g, ':');
         setMessage(`NFCタグ検出: ${uid}`);
-        acquireStamp({ user_id: USER_ID, nfc_uid: uid });
+        acquireStamp({ nfc_uid: uid });
       });
     } catch (err) {
       setMessage('NFCスキャン失敗: ' + err.message);
@@ -75,13 +116,39 @@ const Bingo = ({ navigate, currentScreen }) => {
 
   // NFCスキャン停止
   const stopNfcScan = () => {
-    if (nfcAbortRef.current) {
-      nfcAbortRef.current.abort();
-      nfcAbortRef.current = null;
-    }
-    setNfcScanning(false);
+    abortNfcScan();
     setMessage('NFCスキャンを停止しました');
   };
+
+  // スタート前・確認中はビンゴカードを表示しない
+  // 未スタートならスタートボタン、確認中に失敗(通信エラー・5xxなど)したら再読み込みボタンを表示する
+  if (!started) {
+    return (
+      <div className="screen">
+        <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
+        <div className="nav-bar" style={{ background: '#FFD900' }}>
+          <div className="nav-back clickable" onClick={() => navigate('home')}>‹ ホーム</div>
+          <div className="nav-title">スタンプカード</div>
+          <div style={{ width: '36px' }}></div>
+        </div>
+        <div style={{ background: '#FAFAFA', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#111' }}>
+            {message
+              ? <>ℹ️ {message}</>
+              : started === null
+                ? '読み込み中…'
+                : <>スタートボタンを押すと<br />ビンゴカードが表示されます</>}
+          </div>
+          {started === false && (
+            <div className="big-btn clickable" onClick={handleStart}>スタート →</div>
+          )}
+          {started === null && message && (
+            <div className="big-btn clickable" onClick={handleRetry}>再読み込み ↻</div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // 盤面(取得前は空のマスを9個表示)
   const cells = bingo.cells?.length
