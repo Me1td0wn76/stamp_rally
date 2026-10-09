@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Icon, Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import LoadError from './LoadError.jsx';
+import { NETWORK_ERROR, errorMessage } from '../api/errors';
 
 // 景品。ビンゴが1列でもそろっていれば「ビンゴ済み」、そろっていなければ「まだ」の画面を出す
 // そろったかどうかはビンゴ画面と同じ /api/bingo の bingo_count で判定する
@@ -12,8 +13,11 @@ const Prize = ({ navigate }) => {
 
   useEffect(() => {
     (async () => {
+      // 通信できなかったときは NETWORK_ERROR のまま
+      let status = NETWORK_ERROR;
       try {
         const res = await fetch('/api/bingo');
+        status = res.status;
         // 未スタート(401)はまだビンゴしていない扱い
         if (res.status === 401) {
           setAchieved(false);
@@ -23,7 +27,8 @@ const Prize = ({ navigate }) => {
         if (!res.ok) throw new Error(data.error ?? '不明なエラー');
         setAchieved(data.bingo_count > 0);
       } catch (err) {
-        setMessage('ビンゴ状況取得失敗: ' + err.message);
+        console.error('ビンゴ状況取得失敗:', err);
+        setMessage(errorMessage(status));
       }
     })();
   }, []);
