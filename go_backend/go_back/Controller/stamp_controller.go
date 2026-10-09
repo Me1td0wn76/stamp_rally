@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"go_back/go_backend/go_back/model"
 	"net/http"
 
@@ -25,6 +26,11 @@ func PostUser(c *gin.Context) {
 	userID, err := c.Cookie(userCookieName)
 	if err != nil || !model.UserExists(userID) {
 		userID, err = model.CreateUser()
+		// ユーザー数が上限に達したら 503 Service Unavailable(一時的に受け付けられない)を返す
+		if errors.Is(err, model.ErrTooManyUsers) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 			return
