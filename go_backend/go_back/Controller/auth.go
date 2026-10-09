@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"go_back/go_backend/go_back/model"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,11 +29,11 @@ func setUserCookie(c *gin.Context, userID string) {
 
 // RequireUser は Cookie からユーザーIDを取り出すミドルウェア
 // ミドルウェアとは「ハンドラーの前に実行される共通処理」のこと
-// Cookie が無い(スタート前)場合は 401 を返して、後続のハンドラーを実行しない
+// Cookie が無い(スタート前)場合や、未登録のIDの場合は 401 を返して、後続のハンドラーを実行しない
 func RequireUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, err := c.Cookie(userCookieName)
-		if err != nil || userID == "" {
+		if err != nil || !model.UserExists(userID) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not started"})
 			return
 		}

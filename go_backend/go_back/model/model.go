@@ -126,6 +126,17 @@ func CreateUser() (string, error) {
 	}
 }
 
+// UserExists は CreateUser で発行済みのユーザーIDかどうかを返す
+// Cookie の値はクライアントが自由に書き換えられるため、登録済みかを必ずサーバー側で確認する
+// (サーバー再起動でメモリが消えた後の古いIDもここで弾かれる)
+func UserExists(userID string) bool {
+	Mu.Lock()
+	defer Mu.Unlock()
+
+	_, exists := Users[userID]
+	return exists
+}
+
 // Business logic
 func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 	if _, ok := GetSpotByID(spotID); !ok {

@@ -20,9 +20,10 @@ func GetSpots(c *gin.Context) {
 // フロントエンドのスタートボタン押下時に呼ばれる
 // IDはレスポンスボディには含めず、HttpOnly Cookie でのみ渡す
 func PostUser(c *gin.Context) {
-	// すでに Cookie があればそのIDを使い続ける(スタートを何度押しても進捗が消えないように)
+	// すでに登録済みIDの Cookie があればそのIDを使い続ける(スタートを何度押しても進捗が消えないように)
+	// 未登録のID(偽造・サーバー再起動前の古いID)なら新しく発行し直す
 	userID, err := c.Cookie(userCookieName)
-	if err != nil || userID == "" {
+	if err != nil || !model.UserExists(userID) {
 		userID, err = model.CreateUser()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
