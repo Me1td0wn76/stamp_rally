@@ -3,7 +3,7 @@ const Manual = ({ navigate, currentScreen }) => {
     <div className="screen">
       <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
       <div className="nav-bar" style={{ background: '#00C060' }}>
-        <div className="nav-back clickable" style={{ color: '#FFD900' }} onClick={() => navigate('home')}>‹ 戻る</div>
+        <div className="nav-back clickable" style={{ color: '#FFD900' }} onClick={() => navigate('bingo')}>‹ ビンゴ</div>
         <div className="nav-title" style={{ color: '#FFF' }}>遊び方</div>
         <div style={{ width: '36px' }}></div>
       </div>
@@ -12,7 +12,7 @@ const Manual = ({ navigate, currentScreen }) => {
           <div className="step-num s1">1</div>
           <div>
             <div className="step-title">スタートする</div>
-            <div className="step-desc">ホームの「スタート」を押してビンゴカードを受け取ろう！</div>
+            <div className="step-desc">ビンゴ画面の「スタート」を押してビンゴカードを受け取ろう！</div>
           </div>
         </div>
         <div className="step-card">
