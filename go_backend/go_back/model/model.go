@@ -47,7 +47,8 @@ type Spot struct {
 type Stamp struct {
 	UserID    string    `json:"-"` // ユーザーIDは HttpOnly Cookie でのみ扱い、レスポンスには含めない
 	SpotID    int       `json:"spot_id"`
-	StampedAt time.Time `json:"stamped_at"` // time.Time はGoの日時型
+	StampedAt time.Time `json:"stamped_at"`  // time.Time はGoの日時型
+	CellIndex int       `json::"cell_index"` // このスタンプで埋まったビンゴのマス番号(空きがなければ-1)
 }
 
 // StampRequest は手動スタンプ取得のリクエストボディ
@@ -173,7 +174,8 @@ func UserExists(userID string) bool {
 
 // Business logic
 func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
-	if _, ok := GetSpotByID(spotID); !ok {
+	spot, ok := GetSpotByID(spotID)
+	if !ok {
 		return nil, http.StatusBadRequest, "spot not found"
 	}
 
@@ -186,10 +188,16 @@ func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 		}
 	}
 
+	cellIndex, err := pickBingoCell(userID, spot.Type)
+	if err != nil {
+		return nil, http.StatusInternalServerError, "failed to pick bingo cell"
+	}
+
 	stamp := Stamp{
 		UserID:    userID,
 		SpotID:    spotID,
 		StampedAt: time.Now(),
+		CellIndex: cellIndex,
 	}
 	Stamps[userID] = append(Stamps[userID], stamp)
 	return &stamp, http.StatusCreated, ""
