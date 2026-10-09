@@ -1,3 +1,5 @@
+import { NETWORK_ERROR, errorMessage } from './errors';
+
 // スタンプ取得APIの呼び出し(NFC・QR共通)
 // kind: 'nfc'(body: { nfc_uid }) / 'qr'(body: { qr_token }。NFCタグ・QRコードのURLから開いたときもこちら)
 // 結果は { status, message } で返す。201(取得)・401(未スタート)のときの処理は呼び出し側で行う
@@ -10,7 +12,8 @@ export async function postStamp(kind, body) {
       body: JSON.stringify(body),
     });
   } catch (err) {
-    return { status: 0, message: '通信エラー: ' + err.message };
+    console.error('スタンプ取得の通信失敗:', err);
+    return { status: NETWORK_ERROR, message: errorMessage(NETWORK_ERROR) };
   }
   const data = await res.json().catch(() => ({}));
   switch (res.status) {
@@ -23,6 +26,7 @@ export async function postStamp(kind, body) {
     case 409:
       return { status: 409, message: 'このスポットはすでにスタンプ済みです' };
     default:
-      return { status: res.status, message: 'エラー: ' + (data.error ?? '不明なエラー') };
+      console.error(`スタンプ取得失敗(${res.status}):`, data.error ?? '不明なエラー');
+      return { status: res.status, message: errorMessage(res.status) };
   }
 }
