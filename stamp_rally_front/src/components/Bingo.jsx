@@ -128,7 +128,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
         <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
         <div className="nav-bar" style={{ background: '#FFD900' }}>
           <div className="nav-back clickable" onClick={() => navigate('home')}>‹ ホーム</div>
-          <div className="nav-title">スタンプカード</div>
+          <div className="nav-title">ビンゴカード</div>
           <div style={{ width: '36px' }}></div>
         </div>
         <div style={{ background: '#FAFAFA', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -168,7 +168,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
       <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
       <div className="nav-bar" style={{ background: '#FFD900' }}>
         <div className="nav-back clickable" onClick={() => navigate('home')}>‹ ホーム</div>
-        <div className="nav-title">スタンプカード</div>
+        <div className="nav-title">ビンゴカード</div>
         <div style={{ width: '36px' }}></div>
       </div>
       
