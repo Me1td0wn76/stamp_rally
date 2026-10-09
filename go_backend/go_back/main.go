@@ -41,6 +41,9 @@ func main() {
 		// GET /api/spots：スポット一覧を取得する
 		api.GET("/spots", controller.GetSpots)
 
+		// POST /api/users：新しいユーザーIDを発行する
+		api.POST("/users", controller.PostUser)
+
 		// POST /api/stamps：スポットIDを指定してスタンプを取得する（手動）
 		api.POST("/stamps", controller.PostStamp)
 

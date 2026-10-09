@@ -6,18 +6,65 @@ import Qr from "./components/Qr";
 import Prize from "./components/Prize";
 import Manual from "./components/Manual";
 
+// ユーザーIDを保存する localStorage のキー
+const USER_ID_KEY = 'stamp_rally_user_id';
+
+// localStorage はプライベートモード等で使えない場合があるため try/catch で囲む
+const loadUserId = () => {
+  try {
+    return localStorage.getItem(USER_ID_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const saveUserId = (userId) => {
+  try {
+    localStorage.setItem(USER_ID_KEY, userId);
+  } catch {
+    // 保存できなくても、このセッション中は state で保持される
+  }
+};
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState('home');
+  const [userId, setUserId] = useState(loadUserId);
+  const [starting, setStarting] = useState(false);
 
   // 画面遷移用の関数
   const navigate = (screenName) => {
     setCurrentScreen(screenName);
   };
 
+  // スタートボタン押下時の処理
+  // ユーザーIDが未発行ならAPIで発行して保存し、ビンゴ画面へ遷移する
+  const startRally = async () => {
+    if (userId) {
+      navigate('bingo');
+      return;
+    }
+    if (starting) return;
+    setStarting(true);
+    try {
+      const res = await fetch('/api/users', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.user_id) {
+        throw new Error(data.error ?? '不明なエラー');
+      }
+      saveUserId(data.user_id);
+      setUserId(data.user_id);
+      navigate('bingo');
+    } catch (err) {
+      alert('スタートに失敗しました: ' + err.message);
+    } finally {
+      setStarting(false);
+    }
+  };
+
   return (
     <div className="phone">
-      {currentScreen === 'home' && <Home navigate={navigate} currentScreen={currentScreen} />}
-      {currentScreen === 'bingo' && <Bingo navigate={navigate} currentScreen={currentScreen} />}
+      {currentScreen === 'home' && <Home navigate={navigate} currentScreen={currentScreen} startRally={startRally} />}
+      {currentScreen === 'bingo' && <Bingo navigate={navigate} currentScreen={currentScreen} userId={userId} startRally={startRally} />}
       {currentScreen === 'qr' && <Qr navigate={navigate} currentScreen={currentScreen} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} currentScreen={currentScreen} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} currentScreen={currentScreen} />}

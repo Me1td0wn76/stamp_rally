@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import '../App.css'; // 共通のCSSを読み込み
-
-const USER_ID = 'user_001';
 
 const CELL_COUNT = 9;
 
@@ -11,7 +9,7 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
-const Bingo = ({ navigate, currentScreen }) => {
+const Bingo = ({ navigate, currentScreen, userId, startRally }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   const [message, setMessage] = useState('');
   const [nfcSupported, setNfcSupported] = useState(false);
@@ -19,17 +17,21 @@ const Bingo = ({ navigate, currentScreen }) => {
   const nfcAbortRef = useRef(null);
 
   // ビンゴ状況を取得
-  const fetchBingo = () => {
-    fetch(`/api/bingo/${USER_ID}`)
+  const fetchBingo = useCallback(() => {
+    fetch(`/api/bingo/${encodeURIComponent(userId)}`)
       .then((res) => res.json())
       .then((data) => setBingo(data))
       .catch((err) => setMessage('ビンゴ状況取得失敗: ' + err.message));
-  };
+  }, [userId]);
 
   useEffect(() => {
-    fetchBingo();
     setNfcSupported('NDEFReader' in window);
   }, []);
+
+  // ユーザーIDが発行済みのときだけビンゴ状況を取得する
+  useEffect(() => {
+    if (userId) fetchBingo();
+  }, [userId, fetchBingo]);
 
   // スタンプ取得（共通）
   const acquireStamp = async (body) => {
@@ -65,7 +67,7 @@ const Bingo = ({ navigate, currentScreen }) => {
         // シリアルナンバー（UID）をコロン区切り大文字に正規化
         const uid = serialNumber.toUpperCase().replace(/-/g, ':');
         setMessage(`NFCタグ検出: ${uid}`);
-        acquireStamp({ user_id: USER_ID, nfc_uid: uid });
+        acquireStamp({ user_id: userId, nfc_uid: uid });
       });
     } catch (err) {
       setMessage('NFCスキャン失敗: ' + err.message);
@@ -82,6 +84,26 @@ const Bingo = ({ navigate, currentScreen }) => {
     setNfcScanning(false);
     setMessage('NFCスキャンを停止しました');
   };
+
+  // ユーザーIDが未発行の場合はビンゴカードを表示せず、スタートボタンを表示する
+  if (!userId) {
+    return (
+      <div className="screen">
+        <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
+        <div className="nav-bar" style={{ background: '#FFD900' }}>
+          <div className="nav-back clickable" onClick={() => navigate('home')}>‹ ホーム</div>
+          <div className="nav-title">スタンプカード</div>
+          <div style={{ width: '36px' }}></div>
+        </div>
+        <div style={{ background: '#FAFAFA', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#111' }}>
+            スタートボタンを押すと<br />ビンゴカードが表示されます
+          </div>
+          <div className="big-btn clickable" onClick={startRally}>スタート →</div>
+        </div>
+      </div>
+    );
+  }
 
   // 盤面(取得前は空のマスを9個表示)
   const cells = bingo.cells?.length

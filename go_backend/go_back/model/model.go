@@ -1,6 +1,8 @@
 package model
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"sync"
@@ -94,7 +96,37 @@ var (
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)
+	// map[string]time.Time は「ユーザーIDをキー、発行日時を値」とするマップ
+	Users = make(map[string]time.Time)
 )
+
+// ----------------------------------------------------------------
+// User関連
+// ----------------------------------------------------------------
+
+// userIDBytes はユーザーIDの元になるランダムバイト数(hex化すると32文字になる)
+const userIDBytes = 16
+
+// CreateUser は新しいユーザーIDを発行して登録する
+// crypto/rand を使うことで、推測されにくいIDになる
+func CreateUser() (string, error) {
+	Mu.Lock()
+	defer Mu.Unlock()
+
+	for {
+		b := make([]byte, userIDBytes)
+		if _, err := rand.Read(b); err != nil {
+			return "", err
+		}
+		userID := hex.EncodeToString(b)
+		// 万が一既存IDと衝突した場合は作り直す
+		if _, exists := Users[userID]; exists {
+			continue
+		}
+		Users[userID] = time.Now()
+		return userID, nil
+	}
+}
 
 // Business logic
 func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {

@@ -16,6 +16,17 @@ func GetSpots(c *gin.Context) {
 	c.JSON(http.StatusOK, model.Spots)
 }
 
+// PostUser は新しいユーザーIDを発行するハンドラー
+// フロントエンドのスタートボタン押下時に呼ばれ、発行したIDはフロント側で保持する
+func PostUser(c *gin.Context) {
+	userID, err := model.CreateUser()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"user_id": userID})
+}
+
 // PostStamp は手動でスタンプを取得するハンドラー
 // クライアントから「どのユーザーが・どのスポットで」スタンプを押したか受け取る
 func PostStamp(c *gin.Context) {
