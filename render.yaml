@@ -8,6 +8,9 @@ services:
     # 日本から一番近いリージョン
     region: singapore
     healthCheckPath: /api/spots
+    # Render 側の自動デプロイは切り、GitHub Actions(.github/workflows/deploy.yml)からだけデプロイする
+    # ("off" は引用符で囲むこと。囲まないと YAML では false として読まれる)
+    autoDeployTrigger: "off"
     envVars:
       - key: COOKIE_SECURE
         value: "true"

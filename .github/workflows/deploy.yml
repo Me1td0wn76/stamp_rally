@@ -1,0 +1,68 @@
+# ビルドを確認してから Render にデプロイする
+#   - どのブランチでも push されたらビルド確認だけ行う
+#   - master に push(マージ)されたときだけ、確認が通ったあとにデプロイする
+#
+# 準備(最初に 1 回だけ)
+#   1. Render のサービス画面 > Settings > Deploy Hook の URL をコピーする
+#   2. GitHub のリポジトリ > Settings > Secrets and variables > Actions で、
+#      RENDER_DEPLOY_HOOK_URL という名前の Secret に貼り付ける
+#
+# 注意: デプロイするとサーバーが再起動し、メモリ上のスタンプ・ユーザーはすべて消える
+#       学園祭の開催中は master に push(マージ)しないこと
+name: Deploy
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ビルド確認
+    # 同じリポジトリのブランチからの PR は push 側ですでに確認しているので、フォークからの PR だけ実行する
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Docker イメージをビルド
+        run: docker build -t stamp-rally .
+
+      - name: 起動して画面と API が返るか確認
+        run: |
+          docker run -d --name app -p 8080:8080 -e COOKIE_SECURE=false stamp-rally
+          # 起動を最大 20 秒待つ
+          for i in $(seq 1 20); do
+            curl -fsS http://localhost:8080/api/spots > /dev/null && break
+            sleep 1
+          done
+          curl -fsS http://localhost:8080/api/spots > /dev/null
+          curl -fsS http://localhost:8080/ | grep -q 'id="root"'
+
+      - name: 失敗したときはサーバーのログを表示
+        if: failure()
+        run: docker logs app || true
+
+  deploy:
+    name: Render にデプロイ
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # デプロイが同時に 2 つ走らないよう、前のデプロイ依頼が終わるまで待たせる
+    concurrency:
+      group: render-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Render にデプロイを依頼
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Secret の RENDER_DEPLOY_HOOK_URL が設定されていません"
+            exit 1
+          fi
+          # ref を付けて、ビルドを確認したコミットそのものをデプロイさせる
+          curl --fail --silent --show-error -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
