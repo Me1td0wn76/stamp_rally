@@ -66,6 +66,7 @@ stamp_rally
 │           └───validate.go  起動時のデータ整合性チェック
 └───stamp_rally_front     フロントエンド (React + Vite)
     ├───public
+    │   └───stamps        CodeFlow のスタッフごとのスタンプ画像
     └───src
         ├───App.jsx       画面切り替え・スタート処理
         ├───assets
@@ -165,6 +166,12 @@ URL の形はほかのスポットと同じ `https://<ドメイン>/?spot=<ト�
 - スタッフを追加するときは `staffTokens` に 1 行足し、トークンは上と同じコマンドで生成する。スタッフ名は重複不可
 - アプリの NFC 読み込み画面(Android)で読ませるタグは、そのスタッフの `NfcUID` に UID を登録する
 - スタッフ名は記録の表示に使うだけなので、あとから変えてもよい。トークンを変えるとそのスタッフのタグ・QR は書き直しになる
+
+スタッフごとのスタンプ画像
+- ビンゴの CodeFlow のマスには、押したスタッフの画像が出る(ほかのマスはかぼちゃ)
+- 画像は [stamp_rally_front/public/stamps/](stamp_rally_front/public/stamps/) に置き、そのファイル名を `staffTokens` の `StampImage` に書く。ファイル名は英数字・`-`・`_` と拡張子(png・jpg・jpeg・webp・gif・svg)だけ(それ以外は起動時にエラー)
+- `StampImage` が空のスタッフ・画像を読み込めなかったときは、ほかのマスと同じかぼちゃが出る
+- 今入っている `staff1.svg`〜`staff3.svg` は仮の画像。画像は 1:1 の正方形で作るとマスにきれいに収まる
 
 記録の確認
 - 管理用 API:`ADMIN_PASSWORD` を設定したうえで `https://<ドメイン>/api/admin/staff-stamps` をブラウザで開き、ユーザー名 `admin` とパスワードを入れる。`counts` がスタッフごとの数、`stamps` が 1 回ずつの記録(新しい順)。`staff` が空の行は、手動 API(`POST /api/stamps`)で取ったスタッフ不明のもの

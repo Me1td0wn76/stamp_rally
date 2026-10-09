@@ -16,6 +16,21 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
+// スタンプ済みのマスの印
+// CodeFlow のスタンプは押したスタッフごとに画像が変わる（/api/bingo の stamp_image。画像は public/stamps/ に置き、ファイル名は staff.go に登録する）
+// 画像がないマスと、画像を読み込めなかったときはかぼちゃを出す
+function StampMark({ image }) {
+  const [broken, setBroken] = useState(false);
+  const showImage = image && !broken;
+  return (
+    <span className={`rd-cell-mark${showImage ? ' rd-cell-mark--img' : ''}`} role="img" aria-label="スタンプ済み">
+      {showImage
+        ? <img className="rd-cell-img" src={`/stamps/${image}`} alt="" onError={() => setBroken(true)} />
+        : <Pumpkin />}
+    </span>
+  );
+}
+
 // onChecked: ビンゴ状況を取るたびに、スタート済みかを親に知らせる（true / false: 未スタート(401) / null: 取得に失敗）。
 // 親は最初の結果で、遊び方を出すか（未スタートなら出す）を決める
 const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
@@ -174,7 +189,7 @@ const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingS
             className={`rd-cell${cell.filled ? ' is-on' : ''}${completedLineSet.has(cell.index) ? ' is-line' : ''}`}
           >
             <span className="rd-cell-name">{TYPE_LABEL[cell.type] ?? ''}</span>
-            {cell.filled ? <span className="rd-cell-mark" role="img" aria-label="スタンプ済み"><Pumpkin /></span> : <span className="rd-cell-state">まだ</span>}
+            {cell.filled ? <StampMark image={cell.stamp_image} /> : <span className="rd-cell-state">まだ</span>}
           </li>
         ))}
       </ul>

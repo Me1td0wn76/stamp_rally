@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"log"
+	"regexp"
 )
 
 // init はパッケージ読み込み時(サーバー起動時)に1度だけ実行される。
@@ -15,6 +16,10 @@ func init() {
 
 // minQrTokenLength は QrToken の最小文字数
 const minQrTokenLength = 16
+
+// stampImagePattern はスタッフのスタンプ画像(StampImage)のファイル名の形
+// フロントエンドは /stamps/<ファイル名> をそのまま読み込むので、英数字・ハイフン・アンダースコアと画像の拡張子だけにする
+var stampImagePattern = regexp.MustCompile(`^[A-Za-z0-9_-]+\.(png|jpg|jpeg|webp|gif|svg)$`)
 
 func validateAndNormalize() error {
 	// スタッフ別トークン(staff.go)を使うスポット
@@ -64,6 +69,9 @@ func validateAndNormalize() error {
 			return fmt.Errorf("staff %q is duplicated in spot %d", st.Staff, st.SpotID)
 		}
 		staffNames[src] = true
+		if st.StampImage != "" && !stampImagePattern.MatchString(st.StampImage) {
+			return fmt.Errorf("stamp image of %s must be a file name like \"staff1.png\" (letters, digits, - and _ only): %q", describeSource(src), st.StampImage)
+		}
 		if err := addQrToken(qr, st.QrToken, src); err != nil {
 			return err
 		}

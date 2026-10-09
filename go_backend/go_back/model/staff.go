@@ -16,17 +16,34 @@ import (
 // - 起動時に validate.go がトークンの長さ・重複、SpotID の存在、スタッフ名の重複などをチェックする。
 // - トークンを変えると、そのスタッフのタグ・QR は書き直しになる(書き込み・印刷の前に確定させる)。
 //   スタッフ名は管理用 API・ログに出るだけなので、あとから変えてもよい。
+// - StampImage を登録すると、そのスタッフが押したマスにはかぼちゃの代わりにその画像が出る(GET /api/bingo の stamp_image)。
+//   画像は stamp_rally_front/public/stamps/ に置く。ユーザーに返すのはファイル名だけで、スタッフ名は返さない。
 type staffToken struct {
-	SpotID  int    // スタンプを押すスポット
-	Staff   string // スタッフの名前(スポットの中で重複不可)
-	QrToken string // このスタッフの QRコード・NFCタグの URL(?spot=<トークン>)に入れるトークン
-	NfcUID  string // このスタッフの NFC タグの UID(アプリの NFC 読み込み画面用。未登録なら空)
+	SpotID     int    // スタンプを押すスポット
+	Staff      string // スタッフの名前(スポットの中で重複不可)
+	QrToken    string // このスタッフの QRコード・NFCタグの URL(?spot=<トークン>)に入れるトークン
+	NfcUID     string // このスタッフの NFC タグの UID(アプリの NFC 読み込み画面用。未登録なら空)
+	StampImage string // このスタッフが押したマスに出す画像(public/stamps/ のファイル名。空ならほかのマスと同じかぼちゃ)
 }
 
 var staffTokens = []staffToken{
-	{SpotID: 1, Staff: "スタッフ1", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw"},
-	{SpotID: 1, Staff: "スタッフ2", QrToken: "fUAtG4HeJkFkUyz7LUJqdw"},
-	{SpotID: 1, Staff: "スタッフ3", QrToken: "qYXSsfLX8eBK67ey6gisiw"},
+	{SpotID: 1, Staff: "スタッフ1", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw", StampImage: "staff1.svg"},
+	{SpotID: 1, Staff: "スタッフ2", QrToken: "fUAtG4HeJkFkUyz7LUJqdw", StampImage: "staff2.svg"},
+	{SpotID: 1, Staff: "スタッフ3", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff3.svg"},
+}
+
+// stampImageOf は、スタンプを押したスタッフの画像のファイル名を返す
+// スタッフ別トークンで取ったスタンプでないとき・画像が未登録のときは空
+func stampImageOf(src StampSource) string {
+	if src.Staff == "" {
+		return ""
+	}
+	for _, st := range staffTokens {
+		if st.SpotID == src.SpotID && st.Staff == src.Staff {
+			return st.StampImage
+		}
+	}
+	return ""
 }
 
 // StaffStampCount はスタッフごとのスタンプ数

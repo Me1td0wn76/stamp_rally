@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- 仮の画像(スタッフ3)。本番の画像ができたら、同じファイル名で置き換えるか staff.go の StampImage を変える -->
+  <g transform="rotate(-8 40 40)" fill="#B0362B">
+    <circle cx="40" cy="40" r="36" fill="none" stroke="#B0362B" stroke-width="5" />
+    <circle cx="40" cy="40" r="29" fill="none" stroke="#B0362B" stroke-width="1.5" />
+    <g font-family="sans-serif" font-weight="900" text-anchor="middle">
+      <text x="40" y="33" font-size="13">CF</text>
+      <text x="40" y="61" font-size="28">3</text>
+    </g>
+  </g>
+</svg>

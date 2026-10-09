@@ -141,6 +141,9 @@
 .rd-cell-state { order: 1; font-size: 12px; font-weight: 700; color: #8A6E4F; }
 .rd-cell-mark { order: 1; display: block; width: 52%; animation: rd-stamp .3s ease-out; }
 .rd-pumpkin { display: block; width: 100%; height: auto; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
+/* CodeFlow のスタッフごとのスタンプ画像（Bingo.jsx の StampMark）。かぼちゃより少し大きく出す */
+.rd-cell-mark--img { width: 62%; }
+.rd-cell-img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
 .rd-cell.is-on { background: var(--gold2); border-color: var(--orange); }
 .rd-cell.is-line { border: 3px solid var(--orange); background: var(--gold); }
 
