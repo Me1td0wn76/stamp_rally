@@ -21,7 +21,7 @@ const Prize = ({ navigate, currentScreen }) => {
         <div className="stripe"></div>
         <div className="venue-card">
           <div className="venue-sub-label">📍 受取場所</div>
-          <div className="venue-name">○○教室に<br />来てください</div>
+          <div className="venue-name">402教室に<br />来てください</div>
           <div className="venue-hint-box">
             <svg className="hint-icon" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
