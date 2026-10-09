@@ -9,7 +9,7 @@ import (
 // データ定義のミスをリクエストが来る前に検出するため、問題があれば panic で起動を止める。
 func init() {
 	if err := validateAndNormalize(); err != nil {
-		panic("model: invalid spot date:" + err.Error())
+		panic("model: invalid spot data: " + err.Error())
 	}
 }
 
@@ -17,7 +17,7 @@ func init() {
 const minQrTokenLength = 16
 
 func validateAndNormalize() error {
-	// Spotの検証
+	// Spots の検証
 	spotIDs := make(map[int]bool)
 	qrTokens := make(map[string]int)
 	typeCount := make(map[SpotType]int)
@@ -31,7 +31,6 @@ func validateAndNormalize() error {
 			return fmt.Errorf("spot %d has invalid type: %q", s.ID, s.Type)
 		}
 		typeCount[s.Type]++
-
 		if s.QrToken == "" {
 			return fmt.Errorf("spot %d has empty qr token", s.ID)
 		}
@@ -54,7 +53,7 @@ func validateAndNormalize() error {
 			return fmt.Errorf("bingo card needs %d %q spots but only %d defined", slots, t, typeCount[t])
 		}
 	}
-	if total != bingoCellCount || bingoTypeSlots[SpotTypeCodeflow] != 1 {
+	if total != bingoCellCount || bingoTypeSlots[bingoCenterType] != 1 {
 		return fmt.Errorf("bingoTypeSlots must total %d cells with exactly 1 codeflow (center)", bingoCellCount)
 	}
 

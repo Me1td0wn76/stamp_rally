@@ -48,6 +48,7 @@ type Stamp struct {
 	UserID    string    `json:"-"` // ユーザーIDは HttpOnly Cookie でのみ扱い、レスポンスには含めない
 	SpotID    int       `json:"spot_id"`
 	StampedAt time.Time `json:"stamped_at"` // time.Time はGoの日時型
+	CellIndex int       `json:"cell_index"` // このスタンプで埋まったビンゴのマス番号(空きがなければ-1)
 }
 
 // StampRequest は手動スタンプ取得のリクエストボディ
@@ -55,16 +56,19 @@ type Stamp struct {
 // フィールドが空の場合に自動的にエラーを返す
 // ユーザーIDはボディではなく Cookie で受け取る
 type StampRequest struct {
-	SpotID int `json:"spot_id" binding:"required"`
+	UserID string `json:"user_id" binding:"required"`
+	SpotID int    `json:"spot_id" binding:"required"`
 }
 
 // NfcStampRequest はNFCタグ読み取りによるスタンプ取得のリクエストボディ
 type NfcStampRequest struct {
+	UserID string `json:"user_id" binding:"required"`
 	NfcUID string `json:"nfc_uid" binding:"required"`
 }
 
 // QrStampRequest はQRコード読み取りによるスタンプ取得のリクエストボディ
 type QrStampRequest struct {
+	UserID  string `json:"user_id" binding:"required"`
 	QrToken string `json:"qr_token" binding:"required"`
 }
 
@@ -173,7 +177,8 @@ func UserExists(userID string) bool {
 
 // Business logic
 func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
-	if _, ok := GetSpotByID(spotID); !ok {
+	spot, ok := GetSpotByID(spotID)
+	if !ok {
 		return nil, http.StatusBadRequest, "spot not found"
 	}
 
@@ -186,10 +191,16 @@ func AcquireStamp(userID string, spotID int) (*Stamp, int, string) {
 		}
 	}
 
+	cellIndex, err := pickBingoCell(userID, spot.Type)
+	if err != nil {
+		return nil, http.StatusInternalServerError, "failed to pick bingo cell"
+	}
+
 	stamp := Stamp{
 		UserID:    userID,
 		SpotID:    spotID,
 		StampedAt: time.Now(),
+		CellIndex: cellIndex,
 	}
 	Stamps[userID] = append(Stamps[userID], stamp)
 	return &stamp, http.StatusCreated, ""
