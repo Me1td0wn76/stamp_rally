@@ -1,15 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Icon } from './parts.jsx';
+import { Icon, MenuPumpkin } from './parts.jsx';
 
-// どの画面にも出る白丸（AssistiveTouch）。構成 v1 のものを redesign 用にしたもの。
+// どの画面にも出るかぼちゃのメニュー（AssistiveTouch）。構成 v1 の白丸を redesign 用にしたもの。
+// 押すとかぼちゃの口が開き、口の中から画面へのボタンが飛び出す。
 // タップで4画面へのボタンが扇形に開く。長押しして動かすと、四隅のいちばん近い角に吸いつく。
 // 白丸とメニューはいつもいちばん上に重なり、白丸の位置で画面の中身をずらさない。
 
 const ITEMS = [
-  { key: 'home', label: 'ホーム' },
   { key: 'bingo', label: 'ビンゴ' },
   { key: 'nfc', label: 'NFC' },
   { key: 'prize', label: '景品' },
+  { key: 'manual', label: '説明' },
 ];
 // 角ごとの開く向き（度）。0 が右、90 が下。どの角でも画面の内側へ開く
 const ANGLES = { bl: [270, 300, 330, 360], br: [270, 240, 210, 180], tl: [90, 60, 30, 0], tr: [90, 120, 150, 180] };
@@ -23,7 +24,12 @@ const REDUCED = typeof window !== 'undefined' && window.matchMedia && window.mat
 function readLS(key) { try { return localStorage.getItem(key); } catch { return null; } }
 function writeLS(key, v) { try { localStorage.setItem(key, v); } catch { /* 保存できなくても動く */ } }
 
-export default function AssistiveTouch({ page, onGo, hideTip }) {
+// 隠しミニゲーム：かぼちゃを SECRET_TAPS 回続けて押す（押す間隔が SECRET_GAP_MS 以内）と onSecret を呼ぶ
+const SECRET_TAPS = 10;
+const SECRET_GAP_MS = 700;
+
+export default function AssistiveTouch({ page, onGo, hideTip, onSecret }) {
+  const taps = useRef({ n: 0, at: 0 });
   const [corner, setCorner] = useState(() => (['tl', 'tr', 'bl', 'br'].includes(readLS(CORNER_KEY)) ? readLS(CORNER_KEY) : 'bl'));
   const [open, setOpen] = useState(false);
   const [tip, setTip] = useState(() => readLS(TIP_KEY) !== '1');
@@ -50,6 +56,17 @@ export default function AssistiveTouch({ page, onGo, hideTip }) {
     if (focusButton) btn.current?.focus();
   }
   function toggle() {
+    // 続けて押した回数を数え、10回目でメニューを閉じて隠しミニゲームを出す
+    const now = Date.now();
+    const t = taps.current;
+    t.n = now - t.at <= SECRET_GAP_MS ? t.n + 1 : 1;
+    t.at = now;
+    if (t.n >= SECRET_TAPS && onSecret) {
+      t.n = 0;
+      setOpen(false);
+      onSecret();
+      return;
+    }
     setOpen((v) => !v);
     if (tip) { setTip(false); writeLS(TIP_KEY, '1'); }
   }
@@ -105,7 +122,7 @@ export default function AssistiveTouch({ page, onGo, hideTip }) {
     <>
       {open && <div className="rd-dim" onClick={() => close(false)} aria-hidden="true" />}
       <div ref={wrap} className={`rd-at rd-at--${corner}${drag ? ' is-drag' : ''}`} style={drag ? { transform: `translate(${drag.x}px, ${drag.y}px)` } : undefined}>
-        {tip && !hideTip && !open && !drag && <p className="rd-at-tip">ここを押すと画面を移動できます</p>}
+        {tip && !hideTip && !open && !drag && <p className="rd-at-tip">かぼちゃを押すと画面を移動できます</p>}
         <nav id="rd-at-menu" aria-label="画面メニュー" hidden={!open}>
           {ITEMS.map((it, i) => {
             const a = (ANGLES[corner][i] * Math.PI) / 180;
@@ -116,7 +133,8 @@ export default function AssistiveTouch({ page, onGo, hideTip }) {
                 ref={i === 0 ? firstItem : undefined}
                 type="button"
                 className="rd-at-item"
-                style={{ left: 28 + Math.cos(a) * RADIUS - 31, top: 28 + Math.sin(a) * RADIUS - 31 }}
+                // --fx, --fy: かぼちゃの口からの距離。ここから飛び出してくるように見せる
+                style={{ left: 28 + Math.cos(a) * RADIUS - 31, top: 28 + Math.sin(a) * RADIUS - 31, '--fx': -Math.cos(a) * RADIUS + 'px', '--fy': -Math.sin(a) * RADIUS + 'px', '--i': i }}
                 aria-current={here ? 'page' : undefined}
                 onClick={() => { close(false); if (!here) onGo(it.key); }}
               >
@@ -137,7 +155,9 @@ export default function AssistiveTouch({ page, onGo, hideTip }) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
           onClick={(e) => { if (e.detail === 0) toggle(); }}
-        />
+        >
+          <MenuPumpkin />
+        </button>
       </div>
     </>
   );

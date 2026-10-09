@@ -1,11 +1,15 @@
 import { useState, useRef } from 'react';
+import { postStamp } from '../api/stamps';
 import { Icon, Title } from './parts.jsx';
 
 // NFC の読み取り画面。処理は今の画面（components/Bingo.jsx）の NFC 部分をそのまま移したもの。
-// ちがいは、スタンプ取得後に盤面を読み直す代わりに「ビンゴを見る」ボタンを出すところだけ
+// ちがいは、スタンプ取得後に盤面を読み直す代わりに「ビンゴを見る」ボタンを出すところと、
+// 未スタート(401)のときにスタートボタンのあるビンゴ画面へ移るところ
 // （ビンゴ画面は開くたびに盤面を読み込む）
 
-const USER_ID = 'user_001';
+// Web NFC 非対応(iPhone など)のときの案内
+// タグに書かれた URL は OS が読み取って通知を出し、タップするとこのアプリが ?spot=<トークン> 付きで開く
+const NFC_URL_GUIDE = 'NFCタグにスマホを近づけると通知が出ます。通知をタップするとスタンプが付きます';
 
 const Nfc = ({ navigate }) => {
   const [message, setMessage] = useState('');
@@ -15,22 +19,27 @@ const Nfc = ({ navigate }) => {
   const [nfcScanning, setNfcScanning] = useState(false);
   const nfcAbortRef = useRef(null);
 
-  // スタンプ取得（共通）
-  const acquireStamp = async (body) => {
-    const res = await fetch('/api/stamps/nfc', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.status === 201) {
-      setMessage('スタンプを取得しました！');
-      setAcquired(true);
-    } else if (res.status === 409) {
-      setMessage('このスポットはすでにスタンプ済みです');
-    } else {
-      setMessage('エラー: ' + (data.error ?? '不明なエラー'));
+  // NFCスキャンを止める(NDEFReader の読み取りを AbortController で中断する)
+  const abortNfcScan = () => {
+    if (nfcAbortRef.current) {
+      nfcAbortRef.current.abort();
+      nfcAbortRef.current = null;
     }
+    setNfcScanning(false);
+  };
+
+  // スタンプ取得
+  // 401(未スタート・IDが無効)のときは、タグをかざすたびに 401 のリクエストが飛び続けないようスキャンを止め、
+  // スタートボタンのあるビンゴ画面へ移る
+  const acquireStamp = async (body) => {
+    const { status, message } = await postStamp('nfc', body);
+    if (status === 401) {
+      abortNfcScan();
+      navigate('bingo');
+      return;
+    }
+    setMessage(message);
+    if (status === 201) setAcquired(true);
   };
 
   // NFCスキャン開始
@@ -49,7 +58,7 @@ const Nfc = ({ navigate }) => {
         // シリアルナンバー（UID）をコロン区切り大文字に正規化
         const uid = serialNumber.toUpperCase().replace(/-/g, ':');
         setMessage(`NFCタグ検出: ${uid}`);
-        acquireStamp({ user_id: USER_ID, nfc_uid: uid });
+        acquireStamp({ nfc_uid: uid });
       });
     } catch (err) {
       setMessage('NFCスキャン失敗: ' + err.message);
@@ -59,17 +68,13 @@ const Nfc = ({ navigate }) => {
 
   // NFCスキャン停止
   const stopNfcScan = () => {
-    if (nfcAbortRef.current) {
-      nfcAbortRef.current.abort();
-      nfcAbortRef.current = null;
-    }
-    setNfcScanning(false);
+    abortNfcScan();
     setMessage('NFCスキャンを停止しました');
   };
 
   return (
     <>
-      <Title name="NFC読み込み" back={{ label: 'ホーム', onClick: () => navigate('home') }} />
+      <Title name="NFC読み込み" back={{ label: 'ビンゴ', onClick: () => navigate('bingo') }} />
 
       <section className={`rd-nfc${nfcScanning ? ' is-on' : ''}`}>
         <div className="rd-nfc-ring"><Icon name="nfc" /></div>
@@ -77,7 +82,7 @@ const Nfc = ({ navigate }) => {
       </section>
 
       {message && <p className="rd-msg" role="status">{message}</p>}
-      {!nfcSupported && <p className="rd-note">※ この端末・ブラウザはWeb NFCに未対応です</p>}
+      {!nfcSupported && <p className="rd-note">※ {NFC_URL_GUIDE}</p>}
 
       <button
         type="button"
