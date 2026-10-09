@@ -2,6 +2,10 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	// controller パッケージ：各APIエンドポイントの処理関数が定義されている
 	controller "go_back/go_backend/go_back/Controller"
@@ -53,10 +57,54 @@ func main() {
 		}
 	}
 
-	// サーバーを8080番ポートで起動する
+	// 本番用：環境変数 STATIC_DIR にビルド済みフロントエンド(vite build の dist)の場所が入っていれば、このサーバーから配信する
+	// 画面と API が同じオリジンになるので、リバースプロキシや CORS の設定をしなくても Cookie がそのまま使える
+	// 未設定(開発時)は今まで通り API だけを返し、画面は Vite の開発サーバーが担当する
+	if staticDir := os.Getenv("STATIC_DIR"); staticDir != "" {
+		serveFrontend(r, staticDir)
+	}
+
+	// サーバーを起動する
+	// r.Run() は引数を省略すると環境変数 PORT のポートで待ち受け、PORT が無ければ 8080 番を使う
+	// (Render などのホスティングサービスは、待ち受けるポートを PORT で渡してくる)
 	// r.Run() はサーバーが起動し続けるブロッキング処理なので、エラーが起きたときだけ終了する
 	// log.Fatalf はエラーメッセージを出力してプログラムを終了させる
-	if err := r.Run(":8080"); err != nil {
+	if err := r.Run(); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}
+}
+
+// serveFrontend は、どのルートにも当てはまらなかったリクエストに対してビルド済みフロントエンドを返す
+func serveFrontend(r *gin.Engine, dir string) {
+	fileServer := http.FileServer(http.Dir(dir))
+	indexPath := filepath.Join(dir, "index.html")
+
+	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// 存在しない API や、GET 以外のリクエストには画面ではなく 404 を返す
+		isAPI := path == "/api" || strings.HasPrefix(path, "/api/")
+		isRead := c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead
+		if isAPI || !isRead {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+
+		// 実在するファイル(JS・CSS・画像など)はそのまま返す
+		// filepath.Clean で "../" を取り除き、dir の外のファイルを読ませない
+		filePath := filepath.Join(dir, filepath.Clean("/"+path))
+		if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
+			// assets 以下はファイル名にハッシュが入り、中身が変われば名前も変わるので、長くキャッシュさせてよい
+			if strings.HasPrefix(path, "/assets/") {
+				c.Header("Cache-Control", "public, max-age=31536000, immutable")
+			}
+			fileServer.ServeHTTP(c.Writer, c.Request)
+			return
+		}
+
+		// それ以外(/ や /mock/... など)は index.html を返し、画面の切り替えは React Router に任せる
+		// index.html はデプロイのたびに読み込む JS のファイル名が変わるので、毎回サーバーに確認させる
+		c.Header("Cache-Control", "no-cache")
+		c.File(indexPath)
+	})
 }
