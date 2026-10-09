@@ -46,6 +46,12 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
     if (await startRally()) fetchBingo();
   };
 
+  // 再読み込みボタン押下時:エラー表示を消して(「読み込み中…」に戻して)取り直す
+  const handleRetry = () => {
+    setMessage('');
+    fetchBingo();
+  };
+
   // スタンプ取得（共通）
   const acquireStamp = async (body) => {
     const res = await fetch('/api/stamps/nfc', {
@@ -101,7 +107,7 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
   };
 
   // スタート前・確認中はビンゴカードを表示しない
-  // 未スタートならスタートボタンを表示する
+  // 未スタートならスタートボタン、確認中に失敗(通信エラー・5xxなど)したら再読み込みボタンを表示する
   if (!started) {
     return (
       <div className="screen">
@@ -121,6 +127,9 @@ const Bingo = ({ navigate, currentScreen, startRally }) => {
           </div>
           {started === false && (
             <div className="big-btn clickable" onClick={handleStart}>スタート →</div>
+          )}
+          {started === null && message && (
+            <div className="big-btn clickable" onClick={handleRetry}>再読み込み ↻</div>
           )}
         </div>
       </div>
