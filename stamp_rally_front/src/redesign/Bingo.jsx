@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { postStamp } from '../api/stamps';
+import { NETWORK_ERROR, errorMessage } from '../api/errors';
 import { Icon, Pumpkin, Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import LoadError from './LoadError.jsx';
@@ -33,8 +34,11 @@ const Bingo = ({ navigate, openGuide, pendingSpotToken, clearPendingSpotToken, r
 
   // ビンゴ状況を取得
   const fetchBingo = useCallback(async () => {
+    // 通信できなかったときは NETWORK_ERROR のまま
+    let status = NETWORK_ERROR;
     try {
       const res = await fetch('/api/bingo');
+      status = res.status;
       if (res.status === 401) {
         handleUnauthorized();
         return;
@@ -44,7 +48,8 @@ const Bingo = ({ navigate, openGuide, pendingSpotToken, clearPendingSpotToken, r
       setBingo(data);
       setStarted(true);
     } catch (err) {
-      setMessage('ビンゴ状況取得失敗: ' + err.message);
+      console.error('ビンゴ状況取得失敗:', err);
+      setMessage(errorMessage(status));
     }
   }, [handleUnauthorized]);
 
