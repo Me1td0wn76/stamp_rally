@@ -48,9 +48,10 @@ func stampImageOf(src StampSource) string {
 
 // StaffStampCount はスタッフごとのスタンプ数
 type StaffStampCount struct {
-	SpotID int    `json:"spot_id"`
-	Staff  string `json:"staff"`
-	Count  int    `json:"count"`
+	SpotID     int    `json:"spot_id"`
+	Staff      string `json:"staff"`
+	StampImage string `json:"stamp_image,omitempty"` // スタッフのスタンプ画像(管理画面のランキングに出す)
+	Count      int    `json:"count"`
 }
 
 // StaffStampRecord は、スタッフ別トークンを使うスポットで押されたスタンプ1回分の記録
@@ -76,7 +77,7 @@ func GetStaffStampReport() StaffStampReport {
 	for _, st := range staffTokens {
 		staffSpots[st.SpotID] = true
 		countIndex[StampSource{SpotID: st.SpotID, Staff: st.Staff}] = len(counts)
-		counts = append(counts, StaffStampCount{SpotID: st.SpotID, Staff: st.Staff})
+		counts = append(counts, StaffStampCount{SpotID: st.SpotID, Staff: st.Staff, StampImage: st.StampImage})
 	}
 
 	Mu.Lock()

@@ -166,19 +166,7 @@ func GetBingoResult(userID string) BingoResult {
 	}
 
 	// ライン判定
-	completedLines := [][]int{}
-	for _, line := range BingoLines {
-		complete := true
-		for _, idx := range line {
-			if !cells[idx].Filled {
-				complete = false
-				break
-			}
-		}
-		if complete {
-			completedLines = append(completedLines, line)
-		}
-	}
+	completedLines := completedBingoLines(filled)
 
 	return BingoResult{
 		Cells:      cells,
@@ -187,4 +175,23 @@ func GetBingoResult(userID string) BingoResult {
 		BingoLines: completedLines,
 		IsComplete: filledCount == bingoCellCount,
 	}
+}
+
+// completedBingoLines は、埋まっているマスからそろったラインを返す
+// (管理用の集計 admin.go でも使う)
+func completedBingoLines(filled [bingoCellCount]bool) [][]int {
+	completedLines := [][]int{}
+	for _, line := range BingoLines {
+		complete := true
+		for _, idx := range line {
+			if !filled[idx] {
+				complete = false
+				break
+			}
+		}
+		if complete {
+			completedLines = append(completedLines, line)
+		}
+	}
+	return completedLines
 }

@@ -1,0 +1,157 @@
+/* =================================================================
+   管理画面（/admin）。来場者画面（redesign.css）の夜空・切った紙をそのまま使い、足りないものだけここに書く。
+   クラス名は ad- で始め、.ad の中だけに効く。
+   スマホでも見られるようにしつつ、PC では幅を広げてグラフを 2 列に並べる。
+   グラフの棒は 1 色（濃いオレンジ #C8582A。紙の上で見分けやすさ 3:1 以上）で、数は文字（インクの色）で書く。
+   ================================================================= */
+
+.ad {
+  --bar: #C8582A; --bar-hover: var(--orange2); --mono: ui-monospace, Consolas, 'Courier New', monospace;
+  /* 箱のふちの切り方。来場者画面の --cut-box は % なので、縦に長い箱（記録の一覧など）ではガタガタが大きくなって中身が欠ける。
+     管理画面の箱は長いものが多いので、同じ形を px で切る */
+  --cut-box: polygon(4px 6px, 30% 0, 64% 4px, calc(100% - 4px) 0, 100% 44%, calc(100% - 5px) calc(100% - 3px), 58% 100%, 24% calc(100% - 6px), 0 100%, 6px 52%);
+}
+/* PC では広く使う（来場者画面はスマホの幅 480px まで） */
+.ad .rd-frame { max-width: 1040px; }
+/* かぼちゃのメニューが無いので、下の余白は少なくてよい */
+.ad .rd-scroll { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+.ad h3 { margin: 0; }
+.ad-small { font-size: 12px !important; }
+
+/* 上の操作（最終更新・更新・自動更新・ログアウト） */
+.ad-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.ad-bar-status { flex: 1 1 100%; font-size: 13px; font-weight: 700; color: var(--kraft2); }
+@media (min-width: 720px) { .ad-bar-status { flex: 1 1 auto; } }
+.ad .ad-btn-small { min-height: 40px; padding: 6px 14px; font-size: 14px; }
+.ad-bar .rd-btn--line[aria-pressed="false"] { opacity: .75; }
+
+/* お知らせ（サーバーの再起動）：右に閉じるボタン */
+.ad-notice { display: flex; align-items: flex-start; gap: 10px; }
+.ad-notice span { flex: 1; }
+.ad-notice-close { flex: none; min-width: 32px; min-height: 32px; padding: 0; border: 0; background: none; font-size: 20px; line-height: 1; color: var(--ink) !important; cursor: pointer; }
+
+/* ページの切り替え：紙の札。選んでいる札は金色。入りきらない幅では折り返す
+   （横スクロールにすると、札を押したときに枠の中が縦にずれて文字が隠れるため） */
+.ad-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-tab { position: relative; isolation: isolate; flex: none; min-height: 40px; display: flex; align-items: center; padding: 4px 12px 6px; font-size: 14px; font-weight: 900; color: var(--paper); text-decoration: none; filter: var(--shadow); }
+.ad-tab::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--night2); clip-path: var(--cut-tag); }
+.ad-tab.active { color: var(--ink); }
+.ad-tab.active::before { background: var(--gold); }
+.ad-tab:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* 中身。更新中は前の結果を少し薄くして残す（ちらつかせない） */
+.ad-body { display: flex; flex-direction: column; gap: 16px; transition: opacity .2s; }
+.ad-body.is-loading { opacity: .6; }
+
+/* 箱の中の見出し・文 */
+.ad .rd-box h2 { font-size: 19px; }
+.ad .rd-box > p b { font-weight: 900; color: var(--ink); }
+.ad-warn { padding: 6px 10px; background: var(--gold2); font-size: 13px !important; font-weight: 900 !important; color: var(--ink) !important; clip-path: var(--cut-btn); }
+.ad-err { padding: 8px 10px; background: var(--paper2); border-left: 4px solid var(--orange); font-size: 13px !important; font-weight: 900 !important; color: var(--orange2) !important; }
+.ad .rd-box > .rd-btn { align-self: flex-start; margin-top: 6px; }
+
+/* 記録の開始（サーバーの起動時刻） */
+.ad-since { --pc: var(--paper2); }
+
+/* 数字の札：スマホは 2 列、PC は 4 列 */
+.ad-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 720px) { .ad-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.ad-stat { padding: 14px 14px 12px; gap: 2px; }
+.ad .ad-stat .ad-stat-label { font: 900 13px/1.4 'Zen Kaku Gothic New', sans-serif; color: var(--ink2); }
+.ad .ad-stat .ad-stat-value { font: 900 34px/1.15 'Zen Kaku Gothic New', 'Hiragino Sans', sans-serif; color: var(--ink); overflow-wrap: anywhere; }
+.ad-stat-value small { margin-left: 2px; font-size: 15px; font-weight: 900; }
+.ad .ad-stat .ad-stat-sub { font-size: 12px; font-weight: 700; color: var(--ink2); }
+
+/* PC ではグラフを 2 列に並べる */
+.ad-cols2 { display: grid; gap: 16px; }
+@media (min-width: 900px) { .ad-cols2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 入力欄（ログイン・絞り込み）。iPhone で拡大されないよう 16px */
+.ad-login { gap: 10px; }
+.ad-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 900; color: var(--ink2); }
+.ad-field input, .ad-field select { min-height: 46px; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 0; background: var(--paper2); color: var(--ink); font: 700 16px/1.4 'Zen Kaku Gothic New', sans-serif; }
+.ad-field input:focus-visible, .ad-field select:focus-visible { outline: 3px solid var(--orange); outline-offset: 1px; }
+.ad-login .rd-btn { margin-top: 4px; }
+
+/* 上限に対する割合（ユーザー数 / MAX_USERS）：帯が濃いオレンジで埋まっていく */
+/* ふちは px で切る（% だと PC の幅では左端が大きく欠け、少ない割合の塗りが隠れる） */
+.ad-meter { height: 14px; background: var(--kraft2); clip-path: polygon(2px 1px, 50% 0, calc(100% - 2px) 1px, 100% calc(100% - 1px), 52% 100%, 0 calc(100% - 1px)); overflow: hidden; }
+.ad-meter-fill { display: block; height: 100%; background: var(--bar); }
+
+/* 縦棒グラフ：左に目盛り、下に横軸。いちばん大きい棒にだけ数を書く */
+.ad-chart { position: relative; margin: 26px 0 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 6px; }
+.ad-chart-y { height: 140px; display: flex; flex-direction: column; justify-content: space-between; margin: -7px 0; font-size: 11px; line-height: 14px; color: var(--ink2); text-align: right; font-variant-numeric: tabular-nums; }
+/* 目盛りの線：上端・真ん中は細い線、0 は下の線 */
+.ad-chart-plot { position: relative; height: 140px; display: flex; align-items: stretch; border-bottom: 1px solid var(--kraft); background: linear-gradient(var(--kraft2) 1px, transparent 1px) 0 0 / 100% 50%; }
+.ad-col { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 0 1px; outline: none; cursor: default; }
+.ad-col-bar { display: block; width: 100%; max-width: 24px; background: var(--bar); border-radius: 4px 4px 0 0; }
+.ad-col:hover .ad-col-bar, .ad-col:focus-visible .ad-col-bar { background: var(--bar-hover); }
+.ad-col:focus-visible { box-shadow: inset 0 0 0 2px var(--orange); }
+.ad-col-peak { margin-bottom: 2px; font-size: 12px; font-weight: 900; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* ツールチップ：数を先に太く、説明はあと */
+.ad-tip { position: absolute; bottom: calc(100% + 6px); left: 50%; z-index: 2; transform: translateX(-50%); display: flex; flex-direction: column; padding: 5px 9px; background: var(--ink); color: var(--paper); font-size: 12px; line-height: 1.4; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .1s; }
+.ad-tip b { font-size: 14px; font-weight: 900; }
+.ad-col.is-start .ad-tip { left: 0; transform: none; }
+.ad-col.is-end .ad-tip { left: auto; right: 0; transform: none; }
+.ad-col:hover .ad-tip, .ad-col:focus-visible .ad-tip { opacity: 1; }
+.ad-chart-x { grid-column: 2; display: flex; font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.ad-chart-x span { flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; }
+.ad-chart-unit { grid-column: 2; margin: 0; font-size: 11px; color: var(--ink2); text-align: right; }
+
+/* 表で見る */
+.ad-table-wrap { margin-top: 6px; }
+.ad-table-wrap summary { min-height: 32px; display: flex; align-items: center; font-size: 13px; font-weight: 900; color: var(--orange2); cursor: pointer; }
+.ad-table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--ink); }
+.ad-table th, .ad-table td { padding: 4px 8px; border-bottom: 1px solid var(--kraft2); text-align: left; }
+.ad-table th { font-weight: 900; color: var(--ink2); }
+.ad-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 横棒のランキング：順位・（画像）・名前と棒。数は棒の先に書く */
+.ad-rank { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.ad-rank li { display: grid; grid-template-columns: 2em minmax(0, 1fr); align-items: center; gap: 10px; }
+.ad-rank li.has-img { grid-template-columns: 2em 40px minmax(0, 1fr); }
+.ad-rank-no { font: 900 16px/1 'Zen Kaku Gothic New', sans-serif; color: var(--ink2); text-align: center; font-variant-numeric: tabular-nums; }
+.ad-rank-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ad-rank-name { font-size: 15px; font-weight: 900; color: var(--ink); overflow-wrap: anywhere; }
+.ad-rank-sub { font-size: 12px; font-weight: 700; color: var(--ink2); overflow-wrap: anywhere; }
+.ad-rank-track { display: flex; align-items: center; gap: 6px; }
+.ad-rank-fill { display: block; height: 12px; background: var(--bar); border-radius: 0 4px 4px 0; }
+.ad-rank-val { font-size: 14px; font-weight: 900; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* スタッフのスタンプ画像（無いときはかぼちゃ） */
+.ad-staff-img { display: block; width: 40px; height: 40px; }
+.ad-staff-img img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ad-staff-img .rd-pumpkin { width: 100%; }
+
+/* CodeFlow の記録 */
+.ad-log { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; }
+.ad-log li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 0; border-bottom: 1px solid var(--kraft2); font-size: 14px; font-weight: 900; color: var(--ink); }
+.ad-log time { min-width: 8.5em; font-weight: 700; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.ad-log .ad-staff-img { width: 28px; height: 28px; }
+
+/* QR・URL：カードを並べる（スマホは 1 列、PC は 2〜3 列） */
+.ad-links { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.ad-link { align-items: center; text-align: center; gap: 8px; }
+.ad-link h3 { font: 400 19px/1.35 var(--display); color: var(--ink); }
+.ad .ad-link .ad-link-sub { font-size: 12px; }
+.ad-qr { display: block; width: 100%; max-width: 200px; height: auto; }
+.ad .ad-link .ad-url { width: 100%; padding: 6px 8px; background: var(--paper2); font: 12px/1.45 var(--mono); color: var(--ink2); word-break: break-all; user-select: all; text-align: left; }
+.ad-link .rd-row { width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-body, .ad-tip { transition: none; }
+}
+
+/* 印刷（QR・URL のページの「印刷する」）：QR コードのカードだけを白い紙に並べる */
+@media print {
+  @page { margin: 12mm; }
+  #root { width: auto; border: 0; min-height: 0; display: block; }
+  .ad { position: static; display: block; background: #fff; color: #000; }
+  .ad .rd-frame { max-width: none; height: auto; overflow: visible; display: block; background: #fff; }
+  .ad .rd-night, .ad-noprint { display: none !important; }
+  .ad .rd-scroll { overflow: visible; padding: 0; display: block; animation: none; }
+  .ad-links { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8mm; }
+  .ad-link { break-inside: avoid; filter: none; border: 1px solid #999; }
+  .ad-link::before { background: #fff; clip-path: none; }
+  .ad .ad-link .ad-url { background: #fff; color: #000; }
+}

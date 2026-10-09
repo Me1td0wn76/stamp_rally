@@ -57,12 +57,18 @@ func main() {
 		}
 
 		// ここから下は管理用API(環境変数 ADMIN_PASSWORD を設定したときだけ有効)
-		// ブラウザで開くとユーザー名(admin)とパスワードを聞かれる(Basic 認証)
+		// 管理画面(/admin)のログインフォームから使う。ブラウザで URL を直接開くと、ユーザー名(admin)とパスワードを聞かれる(Basic 認証)
 		if adminAuth := controller.AdminAuth(); adminAuth != nil {
 			admin := api.Group("/admin", adminAuth)
 			{
+				// GET /api/admin/summary：参加者数・ビンゴ達成数・スポットごと・時間帯ごとのスタンプ数などの概要を返す
+				admin.GET("/summary", controller.GetAdminSummary)
+
 				// GET /api/admin/staff-stamps：スタッフ別トークン(CodeFlow)で押されたスタンプの記録・スタッフごとの数を返す
 				admin.GET("/staff-stamps", controller.GetStaffStamps)
+
+				// GET /api/admin/links：QRコード・NFCタグに書き込むトークンをスポット・スタッフごとに返す
+				admin.GET("/links", controller.GetAdminLinks)
 			}
 		}
 	}
