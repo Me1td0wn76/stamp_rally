@@ -11,6 +11,20 @@ import { Icon, Title } from './parts.jsx';
 // タグに書かれた URL は OS が読み取って通知を出し、タップするとこのアプリが ?spot=<トークン> 付きで開く
 const NFC_URL_GUIDE = 'NFCタグにスマホを近づけると通知が出ます。通知をタップするとスタンプが付きます';
 
+// NFC の読み取りを始められなかったときの文（NDEFReader.scan が投げる例外の name ごと）
+function nfcErrorMessage(err) {
+  switch (err.name) {
+    case 'NotAllowedError':
+      return 'NFC の使用が許可されていません。ブラウザの設定で NFC を許可してから、もう一度試してください';
+    case 'NotReadableError':
+      return 'NFC を使えません。スマホの設定で NFC がオンになっているか確かめてください';
+    case 'NotSupportedError':
+      return 'このスマホは NFC の読み取りに対応していません。会場の QR コードをカメラで読み取ってください';
+    default:
+      return 'NFC の読み取りを始められませんでした。もう一度試してください';
+  }
+}
+
 const Nfc = ({ navigate }) => {
   const [message, setMessage] = useState('');
   const [acquired, setAcquired] = useState(false);
@@ -61,7 +75,8 @@ const Nfc = ({ navigate }) => {
         acquireStamp({ nfc_uid: uid });
       });
     } catch (err) {
-      setMessage('NFCスキャン失敗: ' + err.message);
+      console.error('NFCスキャン失敗:', err);
+      setMessage(nfcErrorMessage(err));
       setNfcScanning(false);
     }
   };

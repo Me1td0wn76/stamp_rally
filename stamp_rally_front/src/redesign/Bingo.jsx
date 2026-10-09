@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { postStamp } from '../api/stamps';
+import { NETWORK_ERROR, errorMessage } from '../api/errors';
 import { Icon, Pumpkin, Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import LoadError from './LoadError.jsx';
@@ -15,7 +16,9 @@ const TYPE_LABEL = {
   codeflow: 'Codeflow',
 };
 
-const Bingo = ({ navigate, openGuide, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
+// onChecked: ビンゴ状況を取るたびに、スタート済みかを親に知らせる（true / false: 未スタート(401) / null: 取得に失敗）。
+// 親は最初の結果で、遊び方を出すか（未スタートなら出す）を決める
+const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
   // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
@@ -33,20 +36,27 @@ const Bingo = ({ navigate, openGuide, pendingSpotToken, clearPendingSpotToken, r
 
   // ビンゴ状況を取得
   const fetchBingo = useCallback(async () => {
+    // 通信できなかったときは NETWORK_ERROR のまま
+    let status = NETWORK_ERROR;
     try {
       const res = await fetch('/api/bingo');
+      status = res.status;
       if (res.status === 401) {
         handleUnauthorized();
+        onChecked(false);
         return;
       }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? '不明なエラー');
       setBingo(data);
       setStarted(true);
+      onChecked(true);
     } catch (err) {
-      setMessage('ビンゴ状況取得失敗: ' + err.message);
+      console.error('ビンゴ状況取得失敗:', err);
+      setMessage(errorMessage(status));
+      onChecked(null);
     }
-  }, [handleUnauthorized]);
+  }, [handleUnauthorized, onChecked]);
 
   // 開いたときと、遊び方の「はじめる」でスタートしたとき（reloadSignal が増えたとき）にビンゴ状況を取る
   useEffect(() => {

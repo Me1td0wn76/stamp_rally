@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon, MenuPumpkin } from './parts.jsx';
 
-// 遊び方のスライド。サイトを開くたびに最初に出し、説明の画面などから何度でも開ける。
+// 遊び方のスライド。まだはじめていない人にはサイトを開いたときに最初に出し、説明の画面などから何度でも開ける。
 // かぼちゃの口の中にカードを出し、閉じると上あごが下りて口が閉じ、口の中へ吸いこまれてから元の画面に戻る。
 // 図はすべて HTML と CSS で描いている（画像ファイルは使わない）
 
@@ -143,7 +143,8 @@ function LowerJaw() {
 
 // closable: 「閉じる」とEscキーで閉じられるか（最初に開いたときは閉じられず、「はじめる」で進む）
 // onStart: 「はじめる」で呼ぶ処理（ユーザーIDの発行）。true が返ったら閉じる演出に進み、false ならそのまま残る
-export default function Guide({ onClose, onStart, closable = true }) {
+// startError: 「はじめる」に失敗したときの文。最後のページのボタンの上に出す
+export default function Guide({ onClose, onStart, startError = '', closable = true }) {
   const [index, setIndex] = useState(0);
   // open: カードを表示中 → closing → zoom → fade → done（onClose を呼ぶ）
   const [phase, setPhase] = useState('open');
@@ -235,6 +236,7 @@ export default function Guide({ onClose, onStart, closable = true }) {
           <div className="rd-guide-dots" aria-hidden="true">
             {SLIDES.map((s, i) => <span key={s.title} className={i === index ? 'is-on' : ''}></span>)}
           </div>
+          {last && startError && <p className="rd-guide-err" role="alert">{startError}</p>}
           <div className="rd-row">
             <button type="button" className="rd-btn rd-btn--line" onClick={prev} disabled={index === 0}>戻る</button>
             {last
