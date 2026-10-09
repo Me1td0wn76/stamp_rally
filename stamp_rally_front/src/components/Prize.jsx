@@ -1,4 +1,40 @@
+import { useState, useEffect } from 'react';
+
+// ビンゴ達成状況ごとの表示内容
+// achieved 以外では達成表示を出さない(スタッフが受け取りの確認にこの画面を見るため)
+const NOT_ACHIEVED_HINT = 'ビンゴを達成したら、この画面をスタッフに見せてね';
+const PRIZE_TEXT = {
+  loading:      { hero: '達成状況を確認中…',                 hint: NOT_ACHIEVED_HINT },
+  achieved:     { hero: 'ビンゴ達成おめでとう！',             hint: 'スタッフにこの画面を見せてね' },
+  not_achieved: { hero: 'ビンゴを達成すると景品がもらえるよ！', hint: NOT_ACHIEVED_HINT },
+  error:        { hero: '達成状況を取得できませんでした',     hint: NOT_ACHIEVED_HINT },
+};
+
 const Prize = ({ navigate, currentScreen }) => {
+  // ビンゴ達成状況('loading' | 'achieved' | 'not_achieved' | 'error')
+  const [status, setStatus] = useState('loading');
+
+  // ビンゴ状況を取得し、1ラインでも揃っていればビンゴ達成とする
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/bingo');
+        // 未スタート(401)ならビンゴもしていない
+        if (res.status === 401) {
+          setStatus('not_achieved');
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? '不明なエラー');
+        setStatus(data.bingo_count > 0 ? 'achieved' : 'not_achieved');
+      } catch {
+        setStatus('error');
+      }
+    })();
+  }, []);
+
+  const text = PRIZE_TEXT[status];
+
   return (
     <div className="screen">
       <div className="status-bar"><span>STAMP RALLY</span><span>●●●</span></div>
@@ -16,17 +52,17 @@ const Prize = ({ navigate, currentScreen }) => {
             </svg>
           </div>
           <div className="prize-hero-h2">景品交換場所</div>
-          <div className="prize-hero-p">ビンゴ達成おめでとう！</div>
+          <div className="prize-hero-p">{text.hero}</div>
         </div>
         <div className="stripe"></div>
         <div className="venue-card">
           <div className="venue-sub-label">📍 受取場所</div>
-          <div className="venue-name">○○教室に<br />来てください</div>
+          <div className="venue-name">402教室に<br />来てください</div>
           <div className="venue-hint-box">
             <svg className="hint-icon" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            スタッフにこの画面を見せてね
+            {text.hint}
           </div>
         </div>
         <div style={{ flex: 1 }}></div>
