@@ -1,7 +1,8 @@
 import { NETWORK_ERROR, errorMessage } from './errors';
 
 // スタンプ取得APIの呼び出し(NFC・QR共通)
-// kind: 'nfc'(body: { nfc_uid }) / 'qr'(body: { qr_token }。NFCタグ・QRコードのURLから開いたときもこちら)
+// kind: 'qr'(body: { qr_token }) / 'nfc'(body: { nfc_uid }。タグの UID で取る方式。今の画面では使わない)
+// NFCタグ・QRコードの URL から開いたときも、読み込み画面(redesign/Scan.jsx)で読んだときも 'qr' で URL のトークンを送る
 // 結果は { status, message } で返す。201(取得)・401(未スタート)のときの処理は呼び出し側で行う
 export async function postStamp(kind, body) {
   let res;
