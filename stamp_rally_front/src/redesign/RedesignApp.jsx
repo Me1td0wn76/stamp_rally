@@ -172,8 +172,7 @@ function RedesignApp() {
           clearPendingSpotToken={() => setPendingSpotToken(null)}
         />
       )}
-      {currentScreen === 'nfc' && <Nfc navigate={navigate} />}
-      {currentScreen === 'qr' && <Qr navigate={navigate} />}
+      {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
       {currentScreen === 'credits' && <Credits navigate={navigate} />}
