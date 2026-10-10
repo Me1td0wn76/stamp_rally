@@ -138,9 +138,10 @@ function pickArt() {
   return n;
 }
 
-export default function LoadError({ message }) {
+// artIndex に ARTS の番号（0 始まり）を渡すと、ランダムではなくその絵を出す（例：ページが見つからないときは 1 の迷子のおばけ）
+export default function LoadError({ message, artIndex }) {
   // 出たときに1回だけ選ぶ（描き直しのたびに変わらないように）
-  const [n] = useState(pickArt);
+  const [n] = useState(() => artIndex ?? pickArt());
   const { title, art } = ARTS[n];
   return (
     <section className="rd-box rd-er" role="alert">

@@ -118,9 +118,34 @@ func serveFrontend(r *gin.Engine, dir string) {
 			return
 		}
 
-		// それ以外(/ や /mock/... など)は index.html を返し、画面の切り替えは React Router に任せる
+		// それ以外は index.html を返し、画面の切り替えは React Router に任せる
 		// index.html はデプロイのたびに読み込む JS のファイル名が変わるので、毎回サーバーに確認させる
 		c.Header("Cache-Control", "no-cache")
-		c.File(indexPath)
+		if isFrontendPage(path) {
+			c.File(indexPath)
+			return
+		}
+
+		// 画面に無い URL(/foo など)も index.html を返して React Router に 404 の画面を出させるが、ステータスは 404 にする
+		// c.File はステータスを 200 にしてしまうので、中身を読んで返す
+		html, err := os.ReadFile(indexPath)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.Data(http.StatusNotFound, "text/html; charset=utf-8", html)
 	})
+}
+
+// isFrontendPage は、path がフロントエンドにある画面の URL かどうかを返す
+// フロントエンドの stamp_rally_front/src/main.jsx の Routes と合わせること
+func isFrontendPage(path string) bool {
+	// 末尾の / は付いていても同じ画面(React Router も /redesign/ を /redesign として扱う)
+	p := strings.TrimSuffix(path, "/")
+	switch p {
+	case "", "/redesign", "/mock", "/admin":
+		return true
+	}
+	// 管理画面の中のページ(/admin/codeflow など)。存在しないページは管理画面が /admin に戻す
+	return strings.HasPrefix(p, "/admin/")
 }
