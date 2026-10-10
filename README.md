@@ -34,6 +34,7 @@
 `/mock` にアクセスすると、API を使わないモック画面を表示できます。
 
 画面の URL(`/`・`/redesign`・`/mock`・`/admin`)以外を開くと、ページが見つからない画面(404)が出ます。
+画面の URL の一覧は [routes.json](stamp_rally_front/src/routes.json) の 1 か所にまとめています。画面(main.jsx の Routes)を足したり減らしたりするときは、このファイルも直してください。本番ではサーバーがビルド後の `dist/routes.json` を読んで、一覧に無い URL にステータス 404 を返します(起動時に読めなければ起動を止めます)。
 
 ### 管理画面(`/admin`)
 運営用の画面です。来場者の画面からはリンクしていません。使い方は下の「管理画面」を参照。
@@ -82,6 +83,7 @@ stamp_rally
     │   └───stamps        CodeFlow のスタッフごとのスタンプ画像
     └───src
         ├───App.jsx       画面切り替え・スタート処理
+        ├───routes.json   画面の URL の一覧(ビルドで dist にも出し、サーバーも読む)
         ├───admin         管理画面 (/admin)
         ├───assets
         └───components    各画面 (mocks/ はモック画面)

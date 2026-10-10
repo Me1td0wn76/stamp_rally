@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -77,7 +79,9 @@ func main() {
 	// 画面と API が同じオリジンになるので、リバースプロキシや CORS の設定をしなくても Cookie がそのまま使える
 	// 未設定(開発時)は今まで通り API だけを返し、画面は Vite の開発サーバーが担当する
 	if staticDir := os.Getenv("STATIC_DIR"); staticDir != "" {
-		serveFrontend(r, staticDir)
+		if err := serveFrontend(r, staticDir); err != nil {
+			log.Fatalf("failed to serve frontend: %v", err)
+		}
 	}
 
 	// サーバーを起動する
@@ -91,9 +95,20 @@ func main() {
 }
 
 // serveFrontend は、どのルートにも当てはまらなかったリクエストに対してビルド済みフロントエンドを返す
-func serveFrontend(r *gin.Engine, dir string) {
+// index.html と画面の URL の一覧(routes.json)は、起動時に 1 回だけ読む(どちらもデプロイするまで変わらない)
+// 読めなければビルドの不備なので、エラーを返して起動を止める(来場者に壊れた画面を出さないため)
+// ※ サーバーを動かしたまま dist をビルドし直したときは、サーバーを再起動すると新しい index.html になる
+func serveFrontend(r *gin.Engine, dir string) error {
 	fileServer := http.FileServer(http.Dir(dir))
-	indexPath := filepath.Join(dir, "index.html")
+
+	indexHTML, err := os.ReadFile(filepath.Join(dir, "index.html"))
+	if err != nil {
+		return fmt.Errorf("failed to read index.html: %w", err)
+	}
+	routes, err := loadFrontendRoutes(filepath.Join(dir, "routes.json"))
+	if err != nil {
+		return err
+	}
 
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
@@ -121,36 +136,73 @@ func serveFrontend(r *gin.Engine, dir string) {
 		// それ以外は index.html を返し、画面の切り替えは React Router に任せる
 		// index.html はデプロイのたびに読み込む JS のファイル名が変わるので、毎回サーバーに確認させる
 		c.Header("Cache-Control", "no-cache")
-		// NFC タグ・QR コードの URL(?spot=<トークン>)は、パスが違っていても(/foo?spot=... など)画面側で / のビンゴ画面に移ってスタンプを取るので 200 にする
-		if isFrontendPage(path) || c.Query("spot") != "" {
-			c.File(indexPath)
-			return
-		}
-
 		// 画面に無い URL(/foo など)も index.html を返して React Router に 404 の画面を出させるが、ステータスは 404 にする
-		// c.File はステータスを 200 にしてしまうので、中身を読んで返す
-		html, err := os.ReadFile(indexPath)
-		if err != nil {
-			// ビルドの不備などで index.html が無いと、存在しない URL のすべてでここに来る。原因がわかるようにログに残す
-			// 来場者にはサーバーのエラー文を見せず、ほかの画面のエラーと同じ文を出す
-			log.Printf("failed to read index.html for 404 page: %v", err)
-			c.String(http.StatusInternalServerError, "サーバーで問題が起きました。少し待ってから、もう一度試してください")
-			return
+		// ただし NFC タグ・QR コードの URL(?spot=<トークン>)は、パスが違っていても(/foo?spot=... など)画面側で / のビンゴ画面に移ってスタンプを取るので 200 にする
+		status := http.StatusNotFound
+		if routes.has(path) || c.Query("spot") != "" {
+			status = http.StatusOK
 		}
-		c.Data(http.StatusNotFound, "text/html; charset=utf-8", html)
+		c.Data(status, "text/html; charset=utf-8", indexHTML)
 	})
+	return nil
 }
 
-// isFrontendPage は、path がフロントエンドにある画面の URL かどうかを返す
-// フロントエンドの stamp_rally_front/src/main.jsx の Routes と合わせること
-func isFrontendPage(path string) bool {
-	// React Router(v7)と同じく、大文字と小文字は区別せず、末尾の / はいくつ付いていても同じ画面として扱う
-	// (/REDESIGN・/redesign//・// も、ブラウザではそれぞれ /redesign・/ の画面が出る)
-	p := strings.TrimRight(strings.ToLower(path), "/")
-	switch p {
-	case "", "/redesign", "/mock", "/admin":
-		return true
+// frontendRoutes は、フロントエンドにある画面の URL の一覧(stamp_rally_front/src/routes.json をビルドで dist に出したもの)
+// フロントエンドの main.jsx も同じファイルを読んで Routes を作るので、一覧はこのファイルの 1 か所だけ
+type frontendRoutes struct {
+	// その URL だけの画面(/redesign など)
+	Pages map[string]string `json:"pages"`
+	// その URL と、下のページ全部の画面(/admin・/admin/codeflow など。下の存在しないページは画面側で戻す)
+	Sections map[string]string `json:"sections"`
+}
+
+// loadFrontendRoutes は routes.json を読み、比べやすいように URL を小文字・末尾の / なしにそろえて返す
+func loadFrontendRoutes(path string) (frontendRoutes, error) {
+	var routes frontendRoutes
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return routes, fmt.Errorf("failed to read routes.json: %w", err)
 	}
-	// 管理画面の中のページ(/admin/codeflow など)。存在しないページは管理画面が /admin に戻す
-	return strings.HasPrefix(p, "/admin/")
+	if err := json.Unmarshal(data, &routes); err != nil {
+		return routes, fmt.Errorf("failed to parse routes.json: %w", err)
+	}
+	if len(routes.Pages) == 0 {
+		return routes, fmt.Errorf("routes.json has no pages")
+	}
+	for name, p := range routes.Pages {
+		if !strings.HasPrefix(p, "/") {
+			return routes, fmt.Errorf("routes.json: page %q must start with /: %q", name, p)
+		}
+		routes.Pages[name] = normalizeRoutePath(p)
+	}
+	for name, p := range routes.Sections {
+		// "/" を sections にすると、すべての URL が画面になって 404 が出なくなるので受け付けない
+		if !strings.HasPrefix(p, "/") || normalizeRoutePath(p) == "" {
+			return routes, fmt.Errorf("routes.json: section %q must start with / and must not be /: %q", name, p)
+		}
+		routes.Sections[name] = normalizeRoutePath(p)
+	}
+	return routes, nil
+}
+
+// normalizeRoutePath は、React Router(v7)と同じく、大文字と小文字は区別せず、末尾の / はいくつ付いていても同じ画面として扱えるようにそろえる
+// (/REDESIGN・/redesign//・// も、ブラウザではそれぞれ /redesign・/ の画面が出る。/ は "" になる)
+func normalizeRoutePath(path string) string {
+	return strings.TrimRight(strings.ToLower(path), "/")
+}
+
+// has は、path がフロントエンドにある画面の URL かどうかを返す
+func (routes frontendRoutes) has(path string) bool {
+	p := normalizeRoutePath(path)
+	for _, page := range routes.Pages {
+		if p == page {
+			return true
+		}
+	}
+	for _, section := range routes.Sections {
+		if p == section || strings.HasPrefix(p, section+"/") {
+			return true
+		}
+	}
+	return false
 }

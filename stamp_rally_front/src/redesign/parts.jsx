@@ -58,6 +58,26 @@ export function Night() {
   );
 }
 
+// 画面の外枠（夜空の上に紙を切って貼る入れ物）。来場者の画面・管理画面・エラー画面で共通
+// children はスクロールする中身（.rd-scroll）に入る。scrollKey を変えると中身を作り直す（画面を切り替えたときの出てくる動き）
+// before は夜空とスクロールの間（後ろで動くおばけなど）、after はスクロールの上に重ねるもの（メニュー・遊び方など）
+// className は外側の .rd に足す（管理画面の ad など）
+// AssistiveTouch は .closest('.rd-frame') でこの枠の大きさを測っているので、.rd-frame のクラス名は変えないこと
+export function Frame({ className, scrollKey, before, after, children }) {
+  return (
+    <div className={className ? `rd ${className}` : 'rd'}>
+      <div className="rd-frame">
+        <Night />
+        {before}
+        <main className="rd-scroll" key={scrollKey}>
+          {children}
+        </main>
+        {after}
+      </div>
+    </div>
+  );
+}
+
 // 画面メニューのかぼちゃ。上あご（目とへた）と下あごに分かれていて、開くと上あごが持ち上がり口の中が光る
 export function MenuPumpkin() {
   return (

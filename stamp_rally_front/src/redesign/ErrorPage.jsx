@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import './redesign.css';
 import LoadError from './LoadError.jsx';
-import { Night } from './parts.jsx';
+import { Frame } from './parts.jsx';
 import { errorMessage } from '../api/errors';
 
 // ステータスごとのエラー画面（今は存在しない URL を開いたときの 404 で使う）
@@ -19,16 +19,11 @@ export default function ErrorPage({ status }) {
   const navigate = useNavigate();
   const page = PAGES[status];
   return (
-    <div className="rd">
-      <div className="rd-frame">
-        <Night />
-        <main className="rd-scroll">
-          <LoadError message={page?.message ?? errorMessage(status)} artIndex={page?.artIndex} />
-          <button type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={() => navigate('/', { replace: true })}>
-            ビンゴカードに戻る
-          </button>
-        </main>
-      </div>
-    </div>
+    <Frame>
+      <LoadError message={page?.message ?? errorMessage(status)} artIndex={page?.artIndex} />
+      <button type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={() => navigate('/', { replace: true })}>
+        ビンゴカードに戻る
+      </button>
+    </Frame>
   );
 }

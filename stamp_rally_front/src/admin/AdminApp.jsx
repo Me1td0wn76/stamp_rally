@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import '../redesign/redesign.css';
 import './admin.css';
-import { Night, Title } from '../redesign/parts.jsx';
+import { Frame, Title } from '../redesign/parts.jsx';
 import Loader from '../redesign/Loader.jsx';
 import LoadError from '../redesign/LoadError.jsx';
 import { adminGet } from '../api/admin';
@@ -161,67 +161,62 @@ export default function AdminApp() {
   };
 
   return (
-    <div className="rd ad">
-      <div className="rd-frame">
-        <Night />
-        <main className="rd-scroll">
-          {password === null ? (
-            <Login key={loginError} error={loginError} onLogin={login} />
-          ) : (
-            <>
-              <div className="ad-noprint">
-                <Title name="管理画面" />
-              </div>
-              <div className="ad-bar ad-noprint">
-                <p className="ad-bar-status" role="status">
-                  {loading ? '読み込み中…' : updatedAt ? `最終更新 ${fmtTime(updatedAt)}` : ''}
-                  {auto && '・30秒ごとに自動更新'}
-                </p>
-                <button type="button" className="rd-btn ad-btn-small" onClick={refresh} disabled={loading}>更新 ↻</button>
-                <button type="button" className="rd-btn rd-btn--line ad-btn-small" aria-pressed={auto} onClick={toggleAuto}>
-                  自動更新 {auto ? 'ON' : 'OFF'}
-                </button>
-                <button type="button" className="rd-btn rd-btn--line ad-btn-small" onClick={() => logout()}>ログアウト</button>
-              </div>
+    <Frame className="ad">
+      {password === null ? (
+        <Login key={loginError} error={loginError} onLogin={login} />
+      ) : (
+        <>
+          <div className="ad-noprint">
+            <Title name="管理画面" />
+          </div>
+          <div className="ad-bar ad-noprint">
+            <p className="ad-bar-status" role="status">
+              {loading ? '読み込み中…' : updatedAt ? `最終更新 ${fmtTime(updatedAt)}` : ''}
+              {auto && '・30秒ごとに自動更新'}
+            </p>
+            <button type="button" className="rd-btn ad-btn-small" onClick={refresh} disabled={loading}>更新 ↻</button>
+            <button type="button" className="rd-btn rd-btn--line ad-btn-small" aria-pressed={auto} onClick={toggleAuto}>
+              自動更新 {auto ? 'ON' : 'OFF'}
+            </button>
+            <button type="button" className="rd-btn rd-btn--line ad-btn-small" onClick={() => logout()}>ログアウト</button>
+          </div>
 
-              {restartedAt && (
-                <div className="rd-msg ad-notice ad-noprint" role="status">
-                  <span>サーバーが再起動されました({fmtDateTime(restartedAt)})。それより前の記録は消えています</span>
-                  <button type="button" className="ad-notice-close" onClick={() => setRestartedAt(null)} aria-label="閉じる">×</button>
-                </div>
-              )}
-              {error && data && (
-                <p className="rd-msg ad-noprint" role="alert">更新できませんでした:{error}(前の結果を出しています)</p>
-              )}
-
-              <nav className="ad-tabs ad-noprint" aria-label="管理画面のページ">
-                {TABS.map((tab) => (
-                  <NavLink key={tab.to} to={tab.to} end={tab.end} className="ad-tab">{tab.label}</NavLink>
-                ))}
-              </nav>
-
-              {data ? (
-                <div className={`ad-body${loading ? ' is-loading' : ''}`}>
-                  <Routes>
-                    <Route index element={<Overview summary={data.summary} />} />
-                    <Route path="codeflow" element={<Codeflow staff={data.staff} />} />
-                    <Route path="spots" element={<Spots summary={data.summary} />} />
-                    <Route path="links" element={<Links password={password} onAuthError={handleAuthError} />} />
-                    <Route path="*" element={<Navigate to="/admin" replace />} />
-                  </Routes>
-                </div>
-              ) : error ? (
-                <>
-                  <LoadError message={error} />
-                  <button type="button" className="rd-btn rd-btn--big" onClick={() => { setError(''); refresh(); }}>再読み込み ↻</button>
-                </>
-              ) : (
-                <Loader />
-              )}
-            </>
+          {restartedAt && (
+            <div className="rd-msg ad-notice ad-noprint" role="status">
+              <span>サーバーが再起動されました({fmtDateTime(restartedAt)})。それより前の記録は消えています</span>
+              <button type="button" className="ad-notice-close" onClick={() => setRestartedAt(null)} aria-label="閉じる">×</button>
+            </div>
           )}
-        </main>
-      </div>
-    </div>
+          {error && data && (
+            <p className="rd-msg ad-noprint" role="alert">更新できませんでした:{error}(前の結果を出しています)</p>
+          )}
+
+          <nav className="ad-tabs ad-noprint" aria-label="管理画面のページ">
+            {TABS.map((tab) => (
+              <NavLink key={tab.to} to={tab.to} end={tab.end} className="ad-tab">{tab.label}</NavLink>
+            ))}
+          </nav>
+
+          {data ? (
+            <div className={`ad-body${loading ? ' is-loading' : ''}`}>
+              <Routes>
+                <Route index element={<Overview summary={data.summary} />} />
+                <Route path="codeflow" element={<Codeflow staff={data.staff} />} />
+                <Route path="spots" element={<Spots summary={data.summary} />} />
+                <Route path="links" element={<Links password={password} onAuthError={handleAuthError} />} />
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Routes>
+            </div>
+          ) : error ? (
+            <>
+              <LoadError message={error} />
+              <button type="button" className="rd-btn rd-btn--big" onClick={() => { setError(''); refresh(); }}>再読み込み ↻</button>
+            </>
+          ) : (
+            <Loader />
+          )}
+        </>
+      )}
+    </Frame>
   );
 }

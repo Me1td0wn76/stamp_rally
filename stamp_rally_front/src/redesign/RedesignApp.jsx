@@ -12,7 +12,7 @@ import Haunt from './Haunt.jsx';
 import Loader from './Loader.jsx';
 // 隠しミニゲームは見つけたときに初めて読み込む（ふだんの読み込みを増やさないため）
 const WitchGame = lazy(() => import('./WitchGame.jsx'));
-import { Night } from './parts.jsx';
+import { Frame } from './parts.jsx';
 import { NETWORK_ERROR, errorMessage } from '../api/errors';
 // NFCタグ・QRコードの URL(?spot=<トークン>)から取り出したトークン（取り出し方は spotToken.js）
 import { initialSpotToken } from './spotToken.js';
@@ -134,43 +134,44 @@ function RedesignApp() {
   };
 
   return (
-    <div className="rd">
-      <div className="rd-frame">
-        <Night />
-        {/* 説明画面では黒猫をつかんで上に引っぱると、開発者紹介（隠し画面）へ */}
-        <Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />
-        <main className="rd-scroll" key={currentScreen}>
-          {currentScreen === 'bingo' && (
-            <Bingo
-              reloadSignal={bingoReload}
-              onChecked={handleStartedChecked}
-              navigate={navigate}
-              openGuide={openGuide}
-              pendingSpotToken={pendingSpotToken}
-              clearPendingSpotToken={() => setPendingSpotToken(null)}
-            />
+    <Frame
+      scrollKey={currentScreen}
+      // 説明画面では黒猫をつかんで上に引っぱると、開発者紹介（隠し画面）へ
+      before={<Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />}
+      after={(
+        <>
+          <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} />
+          {secretOpen && (
+            <Suspense fallback={<div className="rd-wg rd-wg--loading"><Loader size="full" /></div>}>
+              <WitchGame onBack={leaveSecret} />
+            </Suspense>
           )}
-          {currentScreen === 'nfc' && <Nfc navigate={navigate} />}
-          {currentScreen === 'qr' && <Qr navigate={navigate} />}
-          {currentScreen === 'prize' && <Prize navigate={navigate} />}
-          {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
-          {currentScreen === 'credits' && <Credits navigate={navigate} />}
-        </main>
-        <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} />
-        {secretOpen && (
-          <Suspense fallback={<div className="rd-wg rd-wg--loading"><Loader size="full" /></div>}>
-            <WitchGame onBack={leaveSecret} />
-          </Suspense>
-        )}
-        {/* 遊び方はロード画面が消え始めてから出す（カードが出てくる動きを見せるため） */}
-        {guideOpen && boot !== 'booting' && <Guide onClose={closeGuide} onStart={startFromGuide} startError={startError} closable={!guideFirst} />}
-        {boot !== 'done' && (
-          <div className={`rd-boot${boot === 'leaving' ? ' is-leaving' : ''}`}>
-            <Loader size="full" />
-          </div>
-        )}
-      </div>
-    </div>
+          {/* 遊び方はロード画面が消え始めてから出す（カードが出てくる動きを見せるため） */}
+          {guideOpen && boot !== 'booting' && <Guide onClose={closeGuide} onStart={startFromGuide} startError={startError} closable={!guideFirst} />}
+          {boot !== 'done' && (
+            <div className={`rd-boot${boot === 'leaving' ? ' is-leaving' : ''}`}>
+              <Loader size="full" />
+            </div>
+          )}
+        </>
+      )}
+    >
+      {currentScreen === 'bingo' && (
+        <Bingo
+          reloadSignal={bingoReload}
+          onChecked={handleStartedChecked}
+          navigate={navigate}
+          openGuide={openGuide}
+          pendingSpotToken={pendingSpotToken}
+          clearPendingSpotToken={() => setPendingSpotToken(null)}
+        />
+      )}
+      {currentScreen === 'nfc' && <Nfc navigate={navigate} />}
+      {currentScreen === 'qr' && <Qr navigate={navigate} />}
+      {currentScreen === 'prize' && <Prize navigate={navigate} />}
+      {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
+      {currentScreen === 'credits' && <Credits navigate={navigate} />}
+    </Frame>
   );
 }
 
