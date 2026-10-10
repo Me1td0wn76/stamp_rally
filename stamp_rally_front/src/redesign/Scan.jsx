@@ -95,7 +95,7 @@ const Scan = ({ navigate, onNotStarted }) => {
           <QrCamera onRead={handleQr} />
         ) : (
           <>
-            <div className="rd-qr-view" aria-hidden="true"><Icon name="qr" /></div>
+            <div className="rd-qr-view" aria-hidden="true"><Icon name="scan" /></div>
             <p>QR コードを読み取りました</p>
             <button type="button" className="rd-btn rd-btn--pri" onClick={restartCamera}>続けて読む</button>
           </>

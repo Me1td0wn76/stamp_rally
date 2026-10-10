@@ -159,7 +159,7 @@ export default function QrCamera({ onRead }) {
       <div className={`rd-qr-view${on ? ' is-on' : ''}`}>
         {/* 映像は読み上げない（読み取りの様子は下の文で伝える） */}
         <video ref={videoRef} className="rd-qr-video" muted playsInline aria-hidden="true" />
-        {on ? <span className="rd-qr-line" aria-hidden="true" /> : <Icon name="qr" />}
+        {on ? <span className="rd-qr-line" aria-hidden="true" /> : <Icon name="scan" />}
       </div>
       {error ? (
         <>
