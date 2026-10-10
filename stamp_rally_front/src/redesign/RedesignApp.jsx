@@ -3,8 +3,7 @@ import './redesign.css';
 import AssistiveTouch from './AssistiveTouch.jsx';
 import Guide from './Guide.jsx';
 import Bingo from './Bingo.jsx';
-import Nfc from './Nfc.jsx';
-import Qr from './Qr.jsx';
+import Scan from './Scan.jsx';
 import Prize from './Prize.jsx';
 import Manual from './Manual.jsx';
 import Credits from './Credits.jsx';
@@ -77,6 +76,13 @@ function RedesignApp() {
   // 画面遷移用の関数
   const navigate = (screenName) => {
     setCurrentScreen(screenName);
+  };
+
+  // 読み込み画面で QR コード・NFC タグを読んだが、未スタート(401)だったとき
+  // URL から開いたときと同じく、トークンを預かってビンゴ画面へ移る（スタートしたらビンゴ画面が送る）
+  const handleScanNotStarted = (token) => {
+    setPendingSpotToken(token);
+    navigate('bingo');
   };
 
   // 隠しミニゲーム（かぼちゃのメニューを10回続けて押すと出る）
@@ -162,8 +168,7 @@ function RedesignApp() {
               clearPendingSpotToken={() => setPendingSpotToken(null)}
             />
           )}
-          {currentScreen === 'nfc' && <Nfc navigate={navigate} />}
-          {currentScreen === 'qr' && <Qr navigate={navigate} />}
+          {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} />}
           {currentScreen === 'prize' && <Prize navigate={navigate} />}
           {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
           {currentScreen === 'credits' && <Credits navigate={navigate} />}
