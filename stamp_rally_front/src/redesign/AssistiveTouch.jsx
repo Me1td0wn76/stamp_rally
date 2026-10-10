@@ -8,7 +8,7 @@ import { Icon, MenuPumpkin } from './parts.jsx';
 
 const ITEMS = [
   { key: 'bingo', label: 'ビンゴ' },
-  { key: 'nfc', label: 'NFC' },
+  { key: 'scan', label: '読込' },
   { key: 'prize', label: '景品' },
   { key: 'manual', label: '説明' },
 ];

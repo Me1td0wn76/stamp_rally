@@ -154,22 +154,29 @@
 .rd-progress-fill { height: 100%; background: var(--orange); transition: width .5s ease-out; }
 .rd-progress-rest { font-size: 14px; font-weight: 900; color: var(--gold); }
 
-/* NFC */
-.rd-nfc { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 30px 18px; color: var(--ink); text-align: center; }
-.rd-nfc-ring { width: 128px; height: 128px; display: grid; place-items: center; background: var(--orange); color: var(--ink); clip-path: polygon(30% 2%, 70% 0, 98% 28%, 100% 70%, 72% 98%, 28% 100%, 2% 72%, 0 30%); }
-.rd-nfc.is-on .rd-nfc-ring { background: var(--gold); animation: rd-pulse 1.6s ease-in-out infinite; }
-.rd-nfc-ring .rd-ico { width: 52px; height: 52px; }
-.rd-nfc p { font-size: 15px; font-weight: 900; }
-@keyframes rd-pulse { 50% { transform: scale(1.08) rotate(4deg); } }
-
-/* QR（見本） */
-.rd-qr { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 26px 18px; color: var(--ink); text-align: center; }
-.rd-qr-frame { position: relative; width: 150px; height: 150px; background: var(--paper2); border: 3px dashed var(--orange); display: grid; place-items: center; overflow: hidden; }
-.rd-qr-mock { display: grid; grid-template-columns: repeat(5, 14px); gap: 4px; opacity: .3; }
-.rd-qr-px { width: 14px; height: 14px; background: var(--ink); }
-.rd-qr-line { position: absolute; left: 10px; right: 10px; top: 50%; height: 4px; background: var(--orange); animation: rd-scan 2s ease-in-out infinite; }
+/* 読み込み（Scan.jsx）：上にカメラで QR コード、下に NFC タグ */
+/* QR：紙の上に切り抜いた窓。中にカメラの映像を出し、読み取りの線が上下に動く */
+.rd-qr { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 18px; color: var(--ink); text-align: center; }
+.rd-qr-view { position: relative; width: min(100%, 280px); aspect-ratio: 1; background: var(--deep); border: 3px dashed var(--orange); display: grid; place-items: center; overflow: hidden; }
+.rd-qr-view > .rd-ico { width: 72px; height: 72px; color: var(--kraft); }
+/* 映像が出るまでは隠しておく（iPhone は見えない動画を再生しないことがあるので、visibility ではなく透明にする） */
+.rd-qr-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+.rd-qr-view.is-on .rd-qr-video { opacity: 1; }
+.rd-qr-line { position: absolute; left: 8%; right: 8%; top: 50%; height: 4px; background: var(--orange); box-shadow: 0 0 8px rgba(238, 122, 43, .8); animation: rd-scan 2.2s ease-in-out infinite; }
 .rd-qr p { font-size: 15px; font-weight: 900; }
-@keyframes rd-scan { 0%, 100% { transform: translateY(-50px); } 50% { transform: translateY(50px); } }
+.rd-qr .rd-qr-hint { font-size: 13px; font-weight: 700; color: var(--ink2); }
+.rd-qr .rd-btn { align-self: stretch; }
+@keyframes rd-scan { 0%, 100% { top: 12%; } 50% { top: 86%; } }
+
+/* NFC：左に輪、右に案内、下にボタン */
+.rd-nfc { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px 14px; padding: 18px 16px; color: var(--ink); }
+.rd-nfc-ring { width: 64px; height: 64px; display: grid; place-items: center; background: var(--orange); color: var(--ink); clip-path: polygon(30% 2%, 70% 0, 98% 28%, 100% 70%, 72% 98%, 28% 100%, 2% 72%, 0 30%); }
+.rd-nfc.is-on .rd-nfc-ring { background: var(--gold); animation: rd-pulse 1.6s ease-in-out infinite; }
+.rd-nfc-ring .rd-ico { width: 30px; height: 30px; }
+.rd-nfc-text h2 { font-size: 18px; line-height: 1.4; }
+.rd-nfc-text p { font-size: 14px; font-weight: 700; color: var(--ink2); }
+.rd-nfc .rd-btn { grid-column: 1 / -1; }
+@keyframes rd-pulse { 50% { transform: scale(1.08) rotate(4deg); } }
 
 /* 景品：まだ＝切り取り線だけの券 / ビンゴ済み＝金色の引換券 */
 .rd-ticket { padding: 26px 18px 22px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--ink); }
