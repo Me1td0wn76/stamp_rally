@@ -121,7 +121,8 @@ func serveFrontend(r *gin.Engine, dir string) {
 		// それ以外は index.html を返し、画面の切り替えは React Router に任せる
 		// index.html はデプロイのたびに読み込む JS のファイル名が変わるので、毎回サーバーに確認させる
 		c.Header("Cache-Control", "no-cache")
-		if isFrontendPage(path) {
+		// NFC タグ・QR コードの URL(?spot=<トークン>)は、パスが違っていても(/foo?spot=... など)画面側で / のビンゴ画面に移ってスタンプを取るので 200 にする
+		if isFrontendPage(path) || c.Query("spot") != "" {
 			c.File(indexPath)
 			return
 		}
@@ -130,7 +131,10 @@ func serveFrontend(r *gin.Engine, dir string) {
 		// c.File はステータスを 200 にしてしまうので、中身を読んで返す
 		html, err := os.ReadFile(indexPath)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			// ビルドの不備などで index.html が無いと、存在しない URL のすべてでここに来る。原因がわかるようにログに残す
+			// 来場者にはサーバーのエラー文を見せず、ほかの画面のエラーと同じ文を出す
+			log.Printf("failed to read index.html for 404 page: %v", err)
+			c.String(http.StatusInternalServerError, "サーバーで問題が起きました。少し待ってから、もう一度試してください")
 			return
 		}
 		c.Data(http.StatusNotFound, "text/html; charset=utf-8", html)
@@ -140,8 +144,9 @@ func serveFrontend(r *gin.Engine, dir string) {
 // isFrontendPage は、path がフロントエンドにある画面の URL かどうかを返す
 // フロントエンドの stamp_rally_front/src/main.jsx の Routes と合わせること
 func isFrontendPage(path string) bool {
-	// 末尾の / は付いていても同じ画面(React Router も /redesign/ を /redesign として扱う)
-	p := strings.TrimSuffix(path, "/")
+	// React Router(v7)と同じく、大文字と小文字は区別せず、末尾の / はいくつ付いていても同じ画面として扱う
+	// (/REDESIGN・/redesign//・// も、ブラウザではそれぞれ /redesign・/ の画面が出る)
+	p := strings.TrimRight(strings.ToLower(path), "/")
 	switch p {
 	case "", "/redesign", "/mock", "/admin":
 		return true
