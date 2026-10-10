@@ -58,6 +58,7 @@ export default function QrCamera({ onRead }) {
   useEffect(() => {
     let alive = true; // false: 消えた（「もう一度」で起動し直すときも）
     let starting = false;
+    let hides = 0; // 裏に回った回数（起動の途中で裏に回ったかを見るため）
     let stream = null;
     let timer = 0;
     let last = { text: '', at: 0 };
@@ -97,6 +98,7 @@ export default function QrCamera({ onRead }) {
     const start = async () => {
       if (starting || stream) return;
       starting = true;
+      const hidesAtStart = hides;
       try {
         // カメラが使えない(HTTPS でない・古いブラウザ・アプリ内ブラウザの一部)
         if (!navigator.mediaDevices?.getUserMedia) throw namedError('NoCameraError', 'getUserMedia が使えない');
@@ -123,16 +125,21 @@ export default function QrCamera({ onRead }) {
         setOn(true);
         scan(decode);
       } catch (err) {
-        if (alive) fail(err);
+        // 起動の途中で裏に回して止めたための失敗（再生が中断されたなど）は、エラーにしない
+        if (alive && hides === hidesAtStart) fail(err);
       } finally {
         starting = false;
       }
+      // 起動の途中で裏に回して、もう戻ってきていたら起動し直す
+      // （戻ってきたときの start は、起動の途中だったので何もしていない）
+      if (alive && hides !== hidesAtStart && !stream && !document.hidden) start();
     };
 
     // 裏に回ったらカメラを止め、戻ってきたら動かし直す
     // （使えなかったときも、設定でカメラを許可して戻ってきたかもしれないので試し直す）
     const onVisibility = () => {
       if (document.hidden) {
+        hides++;
         stop();
         setOn(false);
       } else {
