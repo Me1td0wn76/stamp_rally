@@ -23,13 +23,13 @@ const SLIDES = [
     fig: <MiniGrid on={[1, 4]} labels={{ 1: '済', 4: '済' }} />,
   },
   {
-    title: 'NFC タグにスマホをかざす',
-    text: 'スポットに置いてある NFC タグに、スマホをかざすとスタンプがもらえます。NFC の画面から読み取りを始めてください。',
+    title: 'QR コード・NFC タグを読み込む',
+    text: 'スポットに置いてある QR コードか NFC タグを読み込むと、スタンプがもらえます。ビンゴの画面の「QR・NFC読込」から読み込んでください。',
     fig: (
       <div className="rd-fig-row" aria-hidden="true">
-        <span className="rd-fig-phone"><Icon name="nfc" /></span>
+        <span className="rd-fig-phone"><Icon name="scan" /></span>
         <span className="rd-fig-waves">)))</span>
-        <span className="rd-fig-tag">NFC<br />タグ</span>
+        <span className="rd-fig-tag">QR<br />NFC</span>
       </div>
     ),
   },
@@ -57,12 +57,12 @@ const SLIDES = [
   },
   {
     title: '画面の移動はかぼちゃから',
-    text: '画面のすみにあるかぼちゃを押すと口が開いて、ビンゴ・NFC・景品・説明へ移動できます。長押しして動かすと、好きな角に置けます。',
+    text: '画面のすみにあるかぼちゃを押すと口が開いて、ビンゴ・読込・景品・説明へ移動できます。長押しして動かすと、好きな角に置けます。',
     fig: (
       <div className="rd-fig-at" aria-hidden="true">
         <span className="rd-fig-at-btn"><MenuPumpkin /></span>
         <span className="rd-fig-at-item" style={{ left: 2, top: 18 }}>ビンゴ</span>
-        <span className="rd-fig-at-item" style={{ left: 47, top: 30 }}>NFC</span>
+        <span className="rd-fig-at-item" style={{ left: 47, top: 30 }}>読込</span>
         <span className="rd-fig-at-item" style={{ left: 80, top: 63 }}>景品</span>
         <span className="rd-fig-at-item" style={{ left: 92, top: 108 }}>説明</span>
       </div>

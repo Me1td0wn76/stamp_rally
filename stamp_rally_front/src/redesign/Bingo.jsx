@@ -6,7 +6,7 @@ import Loader from './Loader.jsx';
 import LoadError from './LoadError.jsx';
 
 // ビンゴ。データの取り方・数え方・スタート・URL からのスタンプ取得は今の画面（components/Bingo.jsx）と同じ。
-// NFC の読み取りは Nfc.jsx に分けたので、ここでは NFC 画面へのボタンだけ置く
+// QR コード・NFC タグの読み取りは Scan.jsx に分けたので、ここでは読み込み画面へのボタンだけ置く
 
 const CELL_COUNT = 9;
 
@@ -206,7 +206,7 @@ const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingS
       </div>
 
       {/* アクションボタン */}
-      <button type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={() => navigate('nfc')}><Icon name="nfc" />NFC読込</button>
+      <button type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={() => navigate('scan')}><Icon name="scan" />QR・NFC読込</button>
       <div className="rd-row">
         <button type="button" className="rd-btn" onClick={() => navigate('prize')}><Icon name="prize" />景品</button>
         <button type="button" className="rd-btn" onClick={() => navigate('manual')}><Icon name="manual" />説明</button>

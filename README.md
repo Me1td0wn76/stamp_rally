@@ -26,8 +26,8 @@
 | 画面 | 内容 |
 |---|---|
 | ホーム | スタートボタン、各画面へのショートカット |
-| ビンゴ | ビンゴカード・進捗表示、NFC 読み込み(Web NFC 対応端末のみ) |
-| QR | QR コード読み込み画面(※ 現在は UI のみ) |
+| ビンゴ | ビンゴカード・進捗表示 |
+| 読み込み | カメラで QR コード、Web NFC で NFC タグ(Android の Chrome のみ)を読み込んでスタンプ取得 |
 | 景品 | 景品交換場所の案内 |
 | 遊び方 | 遊び方の説明 |
 
@@ -47,7 +47,6 @@
 | QR・URL | スポット・スタッフごとの QR コードと URL(コピー・SVG 保存・印刷) |
 
 ### 今後の予定
-- QR コード読み込みのフロントエンド実装(バックエンドの API は実装済み)
 - 景品交換後のリセット(再度遊べるようにする)
 
 ---
@@ -98,7 +97,7 @@ stamp_rally
 | GET | `/api/spots` | スポット一覧を取得 |
 | POST | `/api/users` | ユーザー ID を発行し Cookie に保存 |
 | POST 🔒 | `/api/stamps` | スポット ID を指定してスタンプ取得 (`{"spot_id": 1}`) |
-| POST 🔒 | `/api/stamps/nfc` | NFC タグの UID でスタンプ取得 (`{"nfc_uid": "04:AB:CD:EF:02"}`) |
+| POST 🔒 | `/api/stamps/nfc` | NFC タグの UID でスタンプ取得 (`{"nfc_uid": "04:AB:CD:EF:02"}`)。今の画面では使わない(タグの URL を読んで `/api/stamps/qr` に送る) |
 | POST 🔒 | `/api/stamps/qr` | QR コードのトークンでスタンプ取得 (`{"qr_token": "..."}`) |
 | GET 🔒 | `/api/stamps` | 取得済みスタンプ一覧 |
 | GET 🔒 | `/api/bingo` | ビンゴの盤面・達成状況 |
@@ -111,7 +110,7 @@ stamp_rally
 ## スポット・NFC タグの登録
 
 - スポット(店舗)は [model.go](go_backend/go_back/model/model.go) の `Spots` に定義します
-- NFC タグの UID とスポットの対応は [map.go](go_backend/go_back/model/map.go) に登録します
+- NFC タグの UID とスポットの対応は [map.go](go_backend/go_back/model/map.go) に登録します(`POST /api/stamps/nfc` 用。今の画面はタグに書いた URL を読むので、UID の登録はいりません)
 - CodeFlow のスタッフ別トークン(と、スタッフのタグの UID)は [staff.go](go_backend/go_back/model/staff.go) に登録します(下の「CodeFlow のスタッフ別 URL」を参照)
 - 起動時に [validate.go](go_backend/go_back/model/validate.go) が ID や QR トークンの重複、ビンゴに必要なスポット数などをチェックし、問題があれば起動を止めます(UID 未登録のスポットは警告のみ)
 
@@ -173,7 +172,8 @@ https://<ドメイン>/?spot=<トークン>
 ```
 - iPhone のブラウザはページから NFC を読めないが、タグに URL が書かれていれば OS が読み取って通知を出し、タップすると Safari で開く(iPhone XS 以降)。Android も同様に開く
 - QR コードは標準のカメラアプリで読み取って開く
-- アプリは URL のトークンを `POST /api/stamps/qr` に送ってスタンプを付ける
+- アプリの読み込み画面(ビンゴの「QR・NFC読込」、かぼちゃのメニューの「読込」)でも読める。QR コードはカメラで、NFC タグは Web NFC(Android の Chrome のみ)でタグの URL を読む
+- どの読み方でも、アプリは URL のトークンを `POST /api/stamps/qr` に送ってスタンプを付ける(URL のドメインは確かめない)
 
 NFCタグ(NTAG213 など)への書き込み手順
 1. 「NFC Tools」アプリ(iPhone / Android)の「書く」→「レコードを追加」→「URL/URI」で上の URL を書き込む
@@ -196,7 +196,7 @@ URL の形はほかのスポットと同じ `https://<ドメイン>/?spot=<ト�
 
 - CodeFlow にはスポット共通のトークンが無く、スタッフのトークンでしか取れない(共通のトークンや map.go の UID を CodeFlow に登録すると起動時にエラーになる)
 - スタッフを追加するときは `staffTokens` に 1 行足し、トークンは上と同じコマンドで生成する。スタッフ名は重複不可
-- アプリの NFC 読み込み画面(Android)で読ませるタグは、そのスタッフの `NfcUID` に UID を登録する
+- アプリの読み込み画面もタグの URL を読むので、`NfcUID`(タグの UID)の登録はいらない(`POST /api/stamps/nfc` 用)
 - スタッフ名は記録の表示に使うだけなので、あとから変えてもよい。トークンを変えるとそのスタッフのタグ・QR は書き直しになる
 
 スタッフごとのスタンプ画像
@@ -212,4 +212,4 @@ URL の形はほかのスポットと同じ `https://<ドメイン>/?spot=<ト�
 
 ブラウザで http://localhost:5173 を開きます。`/api` へのリクエストは Vite の開発サーバーがバックエンド(localhost:8080)へプロキシします。
 
-> NFC 読み込みは Web NFC(Android 版 Chrome など)に対応した端末・ブラウザでのみ動作します。
+> アプリ内の NFC 読み込みは Web NFC(Android 版 Chrome など)に対応した端末・ブラウザでのみ動作します。カメラでの QR 読み込みと Web NFC は HTTPS(または localhost)でのみ動作します。
