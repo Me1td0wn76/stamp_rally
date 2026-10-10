@@ -56,6 +56,7 @@ export default function QrCamera({ onRead }) {
   });
 
   useEffect(() => {
+    const video = videoRef.current;
     let alive = true; // false: 消えた（「もう一度」で起動し直すときも）
     let starting = false;
     let hides = 0; // 裏に回った回数（起動の途中で裏に回ったかを見るため）
@@ -63,10 +64,12 @@ export default function QrCamera({ onRead }) {
     let timer = 0;
     let last = { text: '', at: 0 };
 
+    // カメラを止める。映像も外す（再生が始まる前にカメラだけ止めると、play() が終わらないまま残るため。外すと中断される）
     const stop = () => {
       clearTimeout(timer);
       if (stream) stream.getTracks().forEach((track) => track.stop());
       stream = null;
+      video.srcObject = null;
     };
 
     const fail = (err) => {
@@ -81,7 +84,7 @@ export default function QrCamera({ onRead }) {
       if (!alive || !stream) return;
       let text = null;
       try {
-        text = await decode(videoRef.current);
+        text = await decode(video);
       } catch {
         // そのコマを読めなかっただけなので、次のコマを読む
       }
@@ -116,7 +119,6 @@ export default function QrCamera({ onRead }) {
         s.getVideoTracks()[0]?.addEventListener('ended', () => {
           if (stream === s) fail(namedError('CameraEndedError', 'カメラの映像が止まった'));
         });
-        const video = videoRef.current;
         video.srcObject = s;
         await video.play();
         const decode = await decoding;
