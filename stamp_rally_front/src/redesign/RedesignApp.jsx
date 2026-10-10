@@ -11,27 +11,15 @@ import Haunt from './Haunt.jsx';
 import Loader from './Loader.jsx';
 // 隠しミニゲームは見つけたときに初めて読み込む（ふだんの読み込みを増やさないため）
 const WitchGame = lazy(() => import('./WitchGame.jsx'));
-import { Night } from './parts.jsx';
+import { Frame } from './parts.jsx';
 import { NETWORK_ERROR, errorMessage } from '../api/errors';
+// NFCタグ・QRコードの URL(?spot=<トークン>)から取り出したトークン（取り出し方は spotToken.js）
+import { initialSpotToken } from './spotToken.js';
 
 // デザインの作り直し。画面の切り替え・スタート・URL からのスタンプ取得は今の App.jsx と同じ仕組み。
 // 見た目は切り絵のかぼちゃ（夜空の上に紙を切って貼ったような画面）。後ろでは星・こうもり・おばけなどが動く。画面の移動はかぼちゃのメニュー（AssistiveTouch）から。
 // 遊び方は図入りのスライドで、まだはじめていない人にだけサイトを開いたときに最初に出す（説明の画面などから何度でも開ける）
 // はじめている人（ユーザーIDが有効な人）は遊び方を出さずに、そのままビンゴカードを見せる
-
-// NFCタグ・QRコードには https://<ドメイン>/?spot=<トークン> のURLが入っている
-// (iPhone はページから NFC を読めないが、タグに書かれた URL は OS が読み取って開いてくれる)
-// URL からトークンを取り出し、再読み込みで二重に送らないよう URL からは消しておく
-// StrictMode ではコンポーネント内の初期化処理が2回呼ばれ、2回目は消した後の URL を読んでしまうため、モジュール読み込み時に1度だけ行う
-function takeSpotTokenFromUrl() {
-  const url = new URL(window.location.href);
-  const token = url.searchParams.get('spot');
-  if (token === null) return null;
-  url.searchParams.delete('spot');
-  window.history.replaceState(null, '', url);
-  return token || null;
-}
-const initialSpotToken = takeSpotTokenFromUrl();
 
 // サイトを開いたときのロード画面：最低表示時間・最長待ち時間・消えるまでの時間(ms)
 const BOOT_MIN_MS = 1000;
@@ -152,42 +140,44 @@ function RedesignApp() {
   };
 
   return (
-    <div className="rd">
-      <div className="rd-frame">
-        <Night />
-        {/* 説明画面では黒猫をつかんで上に引っぱると、開発者紹介（隠し画面）へ */}
-        <Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />
-        <main className="rd-scroll" key={currentScreen}>
-          {currentScreen === 'bingo' && (
-            <Bingo
-              reloadSignal={bingoReload}
-              onChecked={handleStartedChecked}
-              navigate={navigate}
-              openGuide={openGuide}
-              pendingSpotToken={pendingSpotToken}
-              clearPendingSpotToken={() => setPendingSpotToken(null)}
-            />
+    <Frame
+      scrollKey={currentScreen}
+      // 説明画面では黒猫をつかんで上に引っぱると、開発者紹介（隠し画面）へ
+      before={<Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />}
+      after={(
+        <>
+          <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} />
+          {secretOpen && (
+            <Suspense fallback={<div className="rd-wg rd-wg--loading"><Loader size="full" /></div>}>
+              <WitchGame onBack={leaveSecret} />
+            </Suspense>
           )}
-          {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} />}
-          {currentScreen === 'prize' && <Prize navigate={navigate} />}
-          {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
-          {currentScreen === 'credits' && <Credits navigate={navigate} />}
-        </main>
-        <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} />
-        {secretOpen && (
-          <Suspense fallback={<div className="rd-wg rd-wg--loading"><Loader size="full" /></div>}>
-            <WitchGame onBack={leaveSecret} />
-          </Suspense>
-        )}
-        {/* 遊び方はロード画面が消え始めてから出す（カードが出てくる動きを見せるため） */}
-        {guideOpen && boot !== 'booting' && <Guide onClose={closeGuide} onStart={startFromGuide} startError={startError} closable={!guideFirst} />}
-        {boot !== 'done' && (
-          <div className={`rd-boot${boot === 'leaving' ? ' is-leaving' : ''}`}>
-            <Loader size="full" />
-          </div>
-        )}
-      </div>
-    </div>
+          {/* 遊び方はロード画面が消え始めてから出す（カードが出てくる動きを見せるため） */}
+          {guideOpen && boot !== 'booting' && <Guide onClose={closeGuide} onStart={startFromGuide} startError={startError} closable={!guideFirst} />}
+          {boot !== 'done' && (
+            <div className={`rd-boot${boot === 'leaving' ? ' is-leaving' : ''}`}>
+              <Loader size="full" />
+            </div>
+          )}
+        </>
+      )}
+    >
+      {currentScreen === 'bingo' && (
+        <Bingo
+          reloadSignal={bingoReload}
+          onChecked={handleStartedChecked}
+          navigate={navigate}
+          openGuide={openGuide}
+          pendingSpotToken={pendingSpotToken}
+          clearPendingSpotToken={() => setPendingSpotToken(null)}
+        />
+      )}
+      {currentScreen === 'nfc' && <Nfc navigate={navigate} />}
+      {currentScreen === 'qr' && <Qr navigate={navigate} />}
+      {currentScreen === 'prize' && <Prize navigate={navigate} />}
+      {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
+      {currentScreen === 'credits' && <Credits navigate={navigate} />}
+    </Frame>
   );
 }
 

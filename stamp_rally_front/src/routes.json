@@ -1,0 +1,10 @@
+{
+  "pages": {
+    "top": "/",
+    "redesign": "/redesign",
+    "mock": "/mock"
+  },
+  "sections": {
+    "admin": "/admin"
+  }
+}

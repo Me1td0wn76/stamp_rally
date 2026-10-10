@@ -131,16 +131,26 @@ const ARTS = [
 
 // 直前に出した番号（同じものが続かないように）
 let lastArt = -1;
-function pickArt() {
-  let n = Math.floor(Math.random() * ARTS.length);
-  if (n === lastArt) n = (n + 1 + Math.floor(Math.random() * (ARTS.length - 1))) % ARTS.length;
+// fixed に ARTS の番号を渡すとその絵、渡さない・範囲の外ならランダムで選ぶ
+// どちらのときも lastArt を更新する（決めた絵を出したすぐ後のランダムでも、同じ絵が続かないように）
+function pickArt(fixed) {
+  let n;
+  if (Number.isInteger(fixed) && ARTS[fixed]) {
+    n = fixed;
+  } else {
+    n = Math.floor(Math.random() * ARTS.length);
+    if (n === lastArt) n = (n + 1 + Math.floor(Math.random() * (ARTS.length - 1))) % ARTS.length;
+  }
   lastArt = n;
   return n;
 }
 
-export default function LoadError({ message }) {
+// artIndex に ARTS の番号を渡すと、ランダムではなくその絵を出す（例：ページが見つからないときは 1 の迷子のおばけ）
+// artIndex は 0 始まり（上の ARTS のコメントの番号は 1 始まりなので、1 つ小さい数になる）
+// 範囲の外の番号を渡したときは、絵が出ずに画面が真っ白にならないよう、ランダムで選ぶ
+export default function LoadError({ message, artIndex }) {
   // 出たときに1回だけ選ぶ（描き直しのたびに変わらないように）
-  const [n] = useState(pickArt);
+  const [n] = useState(() => pickArt(artIndex));
   const { title, art } = ARTS[n];
   return (
     <section className="rd-box rd-er" role="alert">

@@ -28,6 +28,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Go のテスト(画面の URL ごとの 200・404 の振り分けなど)
+      # テストはフロントエンドの画面の URL の一覧(stamp_rally_front/src/routes.json)も読むので、リポジトリ全体を取ってから動かす
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go_backend/go.mod
+          cache-dependency-path: go_backend/go.sum
+
+      - name: Go のテスト
+        working-directory: go_backend
+        run: go test ./...
+
       - name: Docker イメージをビルド
         run: docker build -t stamp-rally .
 
@@ -41,6 +52,22 @@ jobs:
           done
           curl -fsS http://localhost:8080/api/spots > /dev/null
           curl -fsS http://localhost:8080/ | grep -q 'id="root"'
+
+      - name: 画面の URL は 200、画面に無い URL は 404 になるか確認
+        run: |
+          # URL と、返ってくるはずのステータス
+          check() {
+            actual=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$1")
+            if [ "$actual" != "$2" ]; then
+              echo "::error::$1 のステータスが $actual でした($2 のはず)"
+              exit 1
+            fi
+          }
+          check / 200
+          check /admin 200
+          check '/?spot=x' 200
+          check /foo 404
+          check /redesign/foo 404
 
       - name: 失敗したときはサーバーのログを表示
         if: failure()
