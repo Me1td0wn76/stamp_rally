@@ -208,6 +208,7 @@ const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingS
       {/* アクションボタン */}
       <button type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={() => navigate('scan')}><Icon name="scan" />QR・NFC読込</button>
       <div className="rd-row">
+        <button type="button" className="rd-btn" onClick={() => navigate('zukan')}><Icon name="zukan" />図鑑</button>
         <button type="button" className="rd-btn" onClick={() => navigate('prize')}><Icon name="prize" />景品</button>
         <button type="button" className="rd-btn" onClick={() => navigate('manual')}><Icon name="manual" />説明</button>
       </div>
