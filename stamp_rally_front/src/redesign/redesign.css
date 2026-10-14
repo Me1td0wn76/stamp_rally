@@ -192,6 +192,37 @@
 .rd-dl dt { color: var(--ink2); font-weight: 700; }
 .rd-dl dd { font-weight: 900; }
 
+/* スタンプ図鑑（Zukan.jsx）：取ったスポットは紙のカード（押すと詳細）、まだのスポットは点線の枠に ？ */
+.rd-zk { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+.rd-zk > li { display: flex; min-width: 0; }
+.rd-zk-card { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 10px; text-align: center; }
+.rd-zk-card.is-on { position: relative; isolation: isolate; filter: var(--shadow); border: 0; background: none; color: var(--ink) !important; cursor: pointer; transition: transform .12s; }
+.rd-zk-card.is-on::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper); clip-path: var(--cut-box); }
+.rd-zk-card.is-on:active { transform: translateY(3px); filter: drop-shadow(0 2px 0 rgba(20, 8, 20, .45)); }
+.rd-zk-card.is-off { border: 2px dashed var(--kraft); color: var(--kraft2); opacity: .8; }
+.rd-zk-no { align-self: flex-start; font: 400 12px/1 var(--display); color: var(--orange2); font-variant-numeric: tabular-nums; }
+.rd-zk-card.is-off .rd-zk-no { color: var(--kraft2); }
+.rd-zk-art { width: 64%; aspect-ratio: 1; display: grid; place-items: center; }
+.rd-zk-art img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
+.rd-zk-art .rd-pumpkin { width: 86%; }
+.rd-zk-q { font: 400 34px/1 var(--display); color: var(--kraft); }
+/* 名前は2行まで（全部は詳細で見せる） */
+.rd-zk-name { font-size: 12px; font-weight: 900; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.rd-zk-type { padding: 1px 8px 2px; background: var(--gold2); font-size: 11px; font-weight: 900; line-height: 1.4; color: var(--ink); clip-path: var(--cut-tag); }
+.rd-zk-card.is-off .rd-zk-type { background: var(--kraft); color: var(--ink); }
+/* 詳細：画面いちばん上の層（<dialog>）に紙のカードを出す。後ろは暗くする */
+.rd-zk-dialog { width: min(calc(100% - 36px), 360px); max-width: none; max-height: calc(100dvh - 40px); margin: auto; padding: 0 0 8px; border: 0; background: none; color: var(--ink); overflow-y: auto; overscroll-behavior: contain; }
+.rd-zk-dialog::backdrop { background: rgba(18, 10, 22, .72); }
+.rd-zk-detail { position: relative; isolation: isolate; filter: var(--shadow); display: flex; flex-direction: column; gap: 10px; padding: 20px 20px 18px; animation: rd-card-in .4s cubic-bezier(.2, 1.3, .4, 1); }
+.rd-zk-detail::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper); clip-path: var(--cut-box); }
+.rd-zk-detail-head { display: flex; align-items: center; gap: 8px; }
+.rd-zk-detail .rd-zk-no { align-self: center; font-size: 16px; }
+.rd-zk-art--big { align-self: center; width: 128px; padding: 12px; background: var(--paper2); border: 2px dashed var(--kraft); }
+.rd-zk-detail h2 { font-size: 22px; line-height: 1.35; overflow-wrap: anywhere; }
+.rd-zk-intro { font-size: 14px; font-weight: 700; line-height: 1.7; color: var(--ink2); white-space: pre-line; }
+.rd-zk-intro.is-empty { color: #8A6E4F; }
+.rd-zk-dl { grid-template-columns: 3.5em minmax(0, 1fr); padding: 10px 12px; background: var(--paper2); }
+
 /* 説明：番号つきの紙を順に並べる */
 .rd-man { list-style: none; padding: 0; counter-reset: man; display: flex; flex-direction: column; gap: 16px; }
 .rd-man > li { counter-increment: man; padding: 18px 16px 16px; gap: 10px; }
@@ -453,7 +484,7 @@
 .rd-fig-arrow { font: 400 24px/1 var(--display); color: var(--orange2); }
 .rd-fig-gift { width: 72px; height: 72px; background: var(--orange); color: var(--ink); clip-path: polygon(30% 2%, 70% 0, 98% 28%, 100% 70%, 72% 98%, 28% 100%, 2% 72%, 0 30%); display: grid; place-items: center; }
 .rd-fig-gift .rd-ico { width: 36px; height: 36px; }
-.rd-fig-at { position: relative; width: 140px; height: 150px; transform: scale(.92); }
+.rd-fig-at { position: relative; width: 150px; height: 150px; transform: scale(.92); }
 .rd-fig-at-btn { position: absolute; left: 0; top: 104px; width: 46px; height: 46px; display: grid; place-items: center; }
 .rd-fig-at-btn .rd-mp { width: 46px; height: 46px; }
 /* 図のかぼちゃは口を開けた形で見せる */
@@ -463,7 +494,7 @@
 .rd-fig-at-item { position: absolute; width: 40px; height: 40px; border-radius: 50%; background: var(--gold2); border: 2px solid var(--ink); display: grid; place-items: center; font-size: 9px; font-weight: 900; color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) {
-  .rd-scroll, .rd-msg--strong, .rd-cell-mark, .rd-ticket--yes, .rd-nfc.is-on .rd-nfc-ring, .rd-qr-line, .rd-at-item, .rd-pk-top, .rd-guide, .rd-hx-star, .rd-hx-moon, .rd-hx-cloud { animation: none; }
+  .rd-scroll, .rd-msg--strong, .rd-cell-mark, .rd-ticket--yes, .rd-nfc.is-on .rd-nfc-ring, .rd-qr-line, .rd-at-item, .rd-pk-top, .rd-guide, .rd-zk-detail, .rd-hx-star, .rd-hx-moon, .rd-hx-cloud { animation: none; }
   .rd-mp-top, .rd-mp-bot { transition: none; }
   /* ロード画面は止めた絵で見せる（灯りとハンコは付いた状態） */
   .rd-ld-art *, .rd-ld-word span, .rd-er-art * { animation: none !important; }
