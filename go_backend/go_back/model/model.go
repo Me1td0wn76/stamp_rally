@@ -40,10 +40,14 @@ func (t SpotType) IsValid() bool {
 type Spot struct {
 	ID          int      `json:"id"`
 	Name        string   `json:"name"`
-	Description string   `json:"description"`
+	Description string   `json:"description"`           // クラス・教室の短い説明(管理画面に出す)
 	Type        SpotType `json:"type"`                  // stringベースなため、JSONでは文字列になる
 	QrToken     string   `json:"-"`                     // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)。スタッフ別トークン(staff.go)を使うスポットは空にする
 	StampImage  string   `json:"stamp_image,omitempty"` // このスポットのスタンプ画像(stamp_rally_front/public/stamps/ のファイル名)。取得したマスに、かぼちゃの代わりに出る。画像には店名かクラス名を入れる(教室名だけでは同じ教室の店と区別できない)。空ならかぼちゃ。スタッフ別画像(staff.go)があればそちらが優先
+	// ここから下はスタンプ図鑑(zukan.go)の詳細に出す。スタンプを取った人にだけ見せる
+	Floor string `json:"floor"` // 何階か("5階" など)。テラスなど階で言えない場所は空にして、Place だけ書く
+	Place string `json:"place"` // その階のどこか("501・502教室" など)
+	Intro string `json:"intro"` // 説明文(何のお店・企画か)。空なら図鑑には「準備中」と出る
 }
 
 type Stamp struct {
@@ -91,20 +95,21 @@ var (
 	Mu    sync.Mutex
 	Spots = []Spot{
 		// コードフローは誰が押したかを記録するため、スポット共通のトークンは持たず、スタッフ別トークン(staff.go)だけで取る
-		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow"},
-		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw", StampImage: "spot2.svg"},
-		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg", StampImage: "spot3.svg"},
-		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw", StampImage: "spot4.svg"},
-		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "AP_yrQaLY9PktV6fOYKWYw", StampImage: "spot5.svg"},
-		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "Ag2ClMibWLo6_NMW8WWQ6A", StampImage: "spot6.svg"},
-		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "7W4tCa5_zRbdeWwMyFIAww", StampImage: "spot7.svg"},
-		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "MlhywvmX3nxnY7s8m6m2QQ", StampImage: "spot8.svg"},
-		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "2hz4pd9sSyss1VsmkxrcPg", StampImage: "spot9.svg"},
-		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "FUF96BOCZdnNDOXG-mRGGQ", StampImage: "spot10.svg"},
-		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "UXDGWgbxxHapnHN3W8QYRQ", StampImage: "spot11.svg"},
-		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "Q40tOe3iw4i0_HJ4lC5NCQ", StampImage: "spot12.svg"},
-		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "D1FLzyudewVM4mpsgZ_ZOQ", StampImage: "spot13.svg"},
-		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "2_itjHiBLUOb6QG59imk-A", StampImage: "spot14.svg"},
+		// Floor・Place・Intro はスタンプ図鑑の詳細に出す(Intro は未記入。空のスポットは起動時にログで警告が出る)
+		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow", Floor: "4階", Place: "402教室", Intro: ""},
+		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw", StampImage: "spot2.svg", Floor: "", Place: "テラス", Intro: ""},
+		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg", StampImage: "spot3.svg", Floor: "5階", Place: "501・502教室", Intro: ""},
+		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw", StampImage: "spot4.svg", Floor: "3階", Place: "301教室", Intro: ""},
+		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "AP_yrQaLY9PktV6fOYKWYw", StampImage: "spot5.svg", Floor: "3階", Place: "303教室", Intro: ""},
+		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "Ag2ClMibWLo6_NMW8WWQ6A", StampImage: "spot6.svg", Floor: "3階", Place: "302教室", Intro: ""},
+		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "7W4tCa5_zRbdeWwMyFIAww", StampImage: "spot7.svg", Floor: "5階", Place: "501・502教室", Intro: ""},
+		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "MlhywvmX3nxnY7s8m6m2QQ", StampImage: "spot8.svg", Floor: "3階", Place: "304教室", Intro: ""},
+		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "2hz4pd9sSyss1VsmkxrcPg", StampImage: "spot9.svg", Floor: "3階", Place: "303教室", Intro: ""},
+		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "FUF96BOCZdnNDOXG-mRGGQ", StampImage: "spot10.svg", Floor: "5階", Place: "505教室", Intro: ""},
+		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "UXDGWgbxxHapnHN3W8QYRQ", StampImage: "spot11.svg", Floor: "5階", Place: "501・502教室", Intro: ""},
+		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "Q40tOe3iw4i0_HJ4lC5NCQ", StampImage: "spot12.svg", Floor: "5階", Place: "504教室", Intro: ""},
+		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "D1FLzyudewVM4mpsgZ_ZOQ", StampImage: "spot13.svg", Floor: "6階", Place: "602教室", Intro: ""},
+		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "2_itjHiBLUOb6QG59imk-A", StampImage: "spot14.svg", Floor: "4階", Place: "403教室の前", Intro: ""},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)

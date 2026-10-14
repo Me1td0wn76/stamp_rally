@@ -56,6 +56,9 @@ func main() {
 
 			// GET /api/bingo：ユーザーのビンゴ達成状況を返す
 			user.GET("/bingo", controller.GetBingo)
+
+			// GET /api/zukan：ユーザーのスタンプ図鑑(全スポットと、それぞれスタンプを取ったか)を返す
+			user.GET("/zukan", controller.GetZukan)
 		}
 
 		// ここから下は管理用API(環境変数 ADMIN_PASSWORD を設定したときだけ有効)

@@ -139,6 +139,17 @@ func validateAndNormalize() error {
 			log.Printf("warning: spot %d (%s) has no NFC UID registered", s.ID, s.Name)
 		}
 	}
+
+	// --- スタンプ図鑑の場所・説明文が未記入の Spot も警告のみ ---
+	// 図鑑では、場所が空なら場所の行を出さず、説明文が空なら「準備中」と出るだけなので、起動は止めない
+	for _, s := range Spots {
+		if s.Place == "" {
+			log.Printf("warning: spot %d (%s) has no place for the stamp zukan", s.ID, s.Name)
+		}
+		if s.Intro == "" {
+			log.Printf("warning: spot %d (%s) has no intro for the stamp zukan", s.ID, s.Name)
+		}
+	}
 	return nil
 }
 

@@ -4,6 +4,7 @@ import AssistiveTouch from './AssistiveTouch.jsx';
 import Guide from './Guide.jsx';
 import Bingo from './Bingo.jsx';
 import Scan from './Scan.jsx';
+import Zukan from './Zukan.jsx';
 import Prize from './Prize.jsx';
 import Manual from './Manual.jsx';
 import Credits from './Credits.jsx';
@@ -173,6 +174,7 @@ function RedesignApp() {
         />
       )}
       {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} />}
+      {currentScreen === 'zukan' && <Zukan navigate={navigate} openGuide={openGuide} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
       {currentScreen === 'credits' && <Credits navigate={navigate} />}
