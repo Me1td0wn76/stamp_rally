@@ -57,14 +57,16 @@ const SLIDES = [
   },
   {
     title: '画面の移動はかぼちゃから',
-    text: '画面のすみにあるかぼちゃを押すと口が開いて、ビンゴ・読込・景品・説明へ移動できます。長押しして動かすと、好きな角に置けます。',
+    text: '画面のすみにあるかぼちゃを押すと口が開いて、ビンゴ・読込・図鑑・景品・説明へ移動できます。長押しして動かすと、好きな角に置けます。',
+    // メニューのボタンは、かぼちゃの中心から半径106pxの円の上に22.5度おき（本物のメニューと同じ並び）
     fig: (
       <div className="rd-fig-at" aria-hidden="true">
         <span className="rd-fig-at-btn"><MenuPumpkin /></span>
-        <span className="rd-fig-at-item" style={{ left: 2, top: 18 }}>ビンゴ</span>
-        <span className="rd-fig-at-item" style={{ left: 47, top: 30 }}>読込</span>
-        <span className="rd-fig-at-item" style={{ left: 80, top: 63 }}>景品</span>
-        <span className="rd-fig-at-item" style={{ left: 92, top: 108 }}>説明</span>
+        <span className="rd-fig-at-item" style={{ left: 3, top: 1 }}>ビンゴ</span>
+        <span className="rd-fig-at-item" style={{ left: 44, top: 9 }}>読込</span>
+        <span className="rd-fig-at-item" style={{ left: 78, top: 32 }}>図鑑</span>
+        <span className="rd-fig-at-item" style={{ left: 101, top: 66 }}>景品</span>
+        <span className="rd-fig-at-item" style={{ left: 109, top: 107 }}>説明</span>
       </div>
     ),
   },
