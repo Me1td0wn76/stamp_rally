@@ -28,6 +28,7 @@
 | ホーム | スタートボタン、各画面へのショートカット |
 | ビンゴ | ビンゴカード・進捗表示 |
 | 読み込み | カメラで QR コード、Web NFC で NFC タグ(Android の Chrome のみ)を読み込んでスタンプ取得 |
+| スタンプ図鑑 | 全スポットを番号順に表示。まだ取っていないスポットは「？」。取ったスタンプを押すと説明文・階・場所・取った日時を表示 |
 | 景品 | 景品交換場所の案内 |
 | 遊び方 | 遊び方の説明 |
 
@@ -75,6 +76,7 @@ stamp_rally
 │           ├───bingo.go     ビンゴ盤面の生成・判定
 │           ├───map.go       NFC タグ UID → スポット ID の対応表
 │           ├───staff.go     CodeFlow のスタッフ別トークン・記録の集計
+│           ├───zukan.go     スタンプ図鑑(取ったスポットだけ中身を返す)
 │           ├───admin.go     管理画面用の集計(概要・QR の URL)
 │           └───validate.go  起動時のデータ整合性チェック
 └───stamp_rally_front     フロントエンド (React + Vite)
@@ -101,6 +103,7 @@ stamp_rally
 | POST 🔒 | `/api/stamps/qr` | QR コードのトークンでスタンプ取得 (`{"qr_token": "..."}`) |
 | GET 🔒 | `/api/stamps` | 取得済みスタンプ一覧 |
 | GET 🔒 | `/api/bingo` | ビンゴの盤面・達成状況 |
+| GET 🔒 | `/api/zukan` | スタンプ図鑑(全スポット)。まだ取っていないスポットは `spot_id`・`type`・`acquired: false` だけで、名前・場所・説明は返さない |
 | GET 🔑 | `/api/admin/summary` | 参加者数・ビンゴ達成数・スポットごと・時間帯ごとのスタンプ数などの概要(管理用) |
 | GET 🔑 | `/api/admin/staff-stamps` | CodeFlow のスタンプをどのスタッフが押したかの記録・スタッフごとの数(管理用) |
 | GET 🔑 | `/api/admin/links` | QR コード・NFC タグに書き込むトークン(スポット・スタッフごと。管理用) |
@@ -110,6 +113,8 @@ stamp_rally
 ## スポット・NFC タグの登録
 
 - スポット(店舗)は [model.go](go_backend/go_back/model/model.go) の `Spots` に定義します
+  - スタンプ図鑑の詳細には `Floor`(何階か。例: `5階`)・`Place`(その階のどこか。例: `501・502教室`)・`Intro`(説明文)を出します。テラスなど階で言えない場所は `Floor` を空にして `Place` だけ書きます
+  - `Place`・`Intro` が空のスポットは、起動時にログで警告が出ます(起動は止めません。図鑑では説明文が「準備中」と出ます)
 - NFC タグの UID とスポットの対応は [map.go](go_backend/go_back/model/map.go) に登録します(`POST /api/stamps/nfc` 用。今の画面はタグに書いた URL を読むので、UID の登録はいりません)
 - CodeFlow のスタッフ別トークン(と、スタッフのタグの UID)は [staff.go](go_backend/go_back/model/staff.go) に登録します(下の「CodeFlow のスタッフ別 URL」を参照)
 - 起動時に [validate.go](go_backend/go_back/model/validate.go) が ID や QR トークンの重複、ビンゴに必要なスポット数などをチェックし、問題があれば起動を止めます(UID 未登録のスポットは警告のみ)
