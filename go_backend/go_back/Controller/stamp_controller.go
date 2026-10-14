@@ -148,3 +148,9 @@ func GetUserStamps(c *gin.Context) {
 func GetBingo(c *gin.Context) {
 	c.JSON(http.StatusOK, model.GetBingoResult(userIDFrom(c)))
 }
+
+// GetZukan は指定ユーザーのスタンプ図鑑(全スポットと、それぞれスタンプを取ったか)を返すハンドラー
+// まだ取っていないスポットの名前・場所・説明は model側(zukan.go)で空にしてある(画面では ？ で出す)
+func GetZukan(c *gin.Context) {
+	c.JSON(http.StatusOK, model.GetZukan(userIDFrom(c)))
+}
