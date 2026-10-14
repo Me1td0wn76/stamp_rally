@@ -32,16 +32,20 @@ var staffTokens = []staffToken{
 	{SpotID: 1, Staff: "スタッフ3", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff3.svg"},
 }
 
-// stampImageOf は、スタンプを押したスタッフの画像のファイル名を返す
-// スタッフ別トークンで取ったスタンプでないとき・画像が未登録のときは空
+// stampImageOf は、取ったマスに出すスタンプ画像のファイル名を返す
+// 1. スタッフ別トークンで取ったスタンプで、そのスタッフの画像が登録されていれば、その画像
+// 2. そうでなければ、スポットの画像(Spot.StampImage)。どのスポットで取ったかが画像でわかる
+// どちらも未登録のときは空(フロントエンドはかぼちゃを出す)
 func stampImageOf(src StampSource) string {
-	if src.Staff == "" {
-		return ""
-	}
-	for _, st := range staffTokens {
-		if st.SpotID == src.SpotID && st.Staff == src.Staff {
-			return st.StampImage
+	if src.Staff != "" {
+		for _, st := range staffTokens {
+			if st.SpotID == src.SpotID && st.Staff == src.Staff && st.StampImage != "" {
+				return st.StampImage
+			}
 		}
+	}
+	if spot, ok := GetSpotByID(src.SpotID); ok {
+		return spot.StampImage
 	}
 	return ""
 }

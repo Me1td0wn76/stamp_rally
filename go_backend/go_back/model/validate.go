@@ -17,7 +17,7 @@ func init() {
 // minQrTokenLength は QrToken の最小文字数
 const minQrTokenLength = 16
 
-// stampImagePattern はスタッフのスタンプ画像(StampImage)のファイル名の形
+// stampImagePattern はスタンプ画像(Spot.StampImage・スタッフの StampImage)のファイル名の形
 // フロントエンドは /stamps/<ファイル名> をそのまま読み込むので、英数字・ハイフン・アンダースコアと画像の拡張子だけにする
 var stampImagePattern = regexp.MustCompile(`^[A-Za-z0-9_-]+\.(png|jpg|jpeg|webp|gif|svg)$`)
 
@@ -32,6 +32,7 @@ func validateAndNormalize() error {
 	spotIDs := make(map[int]bool)
 	qr := make(map[string]StampSource)
 	typeCount := make(map[SpotType]int)
+	spotImages := make(map[string]int) // スポットのスタンプ画像 → SpotID
 	for _, s := range Spots {
 		if spotIDs[s.ID] {
 			return fmt.Errorf("duplicate spot id: %d", s.ID)
@@ -42,6 +43,17 @@ func validateAndNormalize() error {
 			return fmt.Errorf("spot %d has invalid type: %q", s.ID, s.Type)
 		}
 		typeCount[s.Type]++
+
+		// スポットのスタンプ画像。同じ画像を使い回すと、どのスポットで取ったかが分からなくなるので重複は不可
+		if s.StampImage != "" {
+			if !stampImagePattern.MatchString(s.StampImage) {
+				return fmt.Errorf("stamp image of spot %d must be a file name like \"spot2.png\" (letters, digits, - and _ only): %q", s.ID, s.StampImage)
+			}
+			if prev, dup := spotImages[s.StampImage]; dup {
+				return fmt.Errorf("stamp image %q is used by both spot %d and %d", s.StampImage, prev, s.ID)
+			}
+			spotImages[s.StampImage] = s.ID
+		}
 
 		// スタッフ別トークンを使うスポットに共通のトークンがあると、そちらで取ったスタンプは誰が押したかわからなくなる
 		if staffSpots[s.ID] {
