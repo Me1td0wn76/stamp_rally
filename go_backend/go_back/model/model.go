@@ -41,8 +41,9 @@ type Spot struct {
 	ID          int      `json:"id"`
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
-	Type        SpotType `json:"type"` // stringベースなため、JSONでは文字列になる
-	QrToken string   `json:"-"`    // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)。スタッフ別トークン(staff.go)を使うスポットは空にする
+	Type        SpotType `json:"type"`                  // stringベースなため、JSONでは文字列になる
+	QrToken     string   `json:"-"`                     // QRコード・NFCタグのURL(?spot=<トークン>)に埋め込む一意の文字列。推測されないようランダムな文字列にする(フロントエンドには返さないので json:"-" で非公開)。スタッフ別トークン(staff.go)を使うスポットは空にする
+	StampImage  string   `json:"stamp_image,omitempty"` // このスポットのスタンプ画像(stamp_rally_front/public/stamps/ のファイル名)。取得したマスに、かぼちゃの代わりに出る。画像には店名かクラス名を入れる(教室名だけでは同じ教室の店と区別できない)。空ならかぼちゃ。スタッフ別画像(staff.go)があればそちらが優先
 }
 
 type Stamp struct {
@@ -91,19 +92,19 @@ var (
 	Spots = []Spot{
 		// コードフローは誰が押したかを記録するため、スポット共通のトークンは持たず、スタッフ別トークン(staff.go)だけで取る
 		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow"},
-		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw"},
-		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg"},
-		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw"},
-		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "AP_yrQaLY9PktV6fOYKWYw"},
-		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "Ag2ClMibWLo6_NMW8WWQ6A"},
-		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "7W4tCa5_zRbdeWwMyFIAww"},
-		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "MlhywvmX3nxnY7s8m6m2QQ"},
-		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "2hz4pd9sSyss1VsmkxrcPg"},
-		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "FUF96BOCZdnNDOXG-mRGGQ"},
-		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "UXDGWgbxxHapnHN3W8QYRQ"},
-		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "Q40tOe3iw4i0_HJ4lC5NCQ"},
-		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "D1FLzyudewVM4mpsgZ_ZOQ"},
-		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "2_itjHiBLUOb6QG59imk-A"},
+		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw", StampImage: "spot2.svg"},
+		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg", StampImage: "spot3.svg"},
+		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw", StampImage: "spot4.svg"},
+		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "AP_yrQaLY9PktV6fOYKWYw", StampImage: "spot5.svg"},
+		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "Ag2ClMibWLo6_NMW8WWQ6A", StampImage: "spot6.svg"},
+		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "7W4tCa5_zRbdeWwMyFIAww", StampImage: "spot7.svg"},
+		{ID: 8, Name: "単位BET", Description: "R1A・304", Type: "activity", QrToken: "MlhywvmX3nxnY7s8m6m2QQ", StampImage: "spot8.svg"},
+		{ID: 9, Name: "スリランカ人ポテト", Description: "R1B・303", Type: "food", QrToken: "2hz4pd9sSyss1VsmkxrcPg", StampImage: "spot9.svg"},
+		{ID: 10, Name: "スープ$カフェ", Description: "S3・505", Type: "food", QrToken: "FUF96BOCZdnNDOXG-mRGGQ", StampImage: "spot10.svg"},
+		{ID: 11, Name: "久ちゃん綿あめショップ", Description: "S2・501.2", Type: "food", QrToken: "UXDGWgbxxHapnHN3W8QYRQ", StampImage: "spot11.svg"},
+		{ID: 12, Name: "(仮)射的", Description: "S1・504", Type: "activity", QrToken: "Q40tOe3iw4i0_HJ4lC5NCQ", StampImage: "spot12.svg"},
+		{ID: 13, Name: "大乱闘気配りブラザーズ", Description: "J2・602", Type: "activity", QrToken: "D1FLzyudewVM4mpsgZ_ZOQ", StampImage: "spot13.svg"},
+		{ID: 14, Name: "岩田屋", Description: "J1・403前", Type: "food", QrToken: "2_itjHiBLUOb6QG59imk-A", StampImage: "spot14.svg"},
 	}
 	// map[string][]Stamp は「ユーザーIDをキー、スタンプ一覧を値」とするマップ
 	Stamps = make(map[string][]Stamp)

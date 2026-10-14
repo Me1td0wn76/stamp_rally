@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- 仮の画像(スポット8・R1A)。本番の画像ができたら、同じファイル名で置き換えるか model.go の StampImage を変える -->
+  <!-- 画像には、店名かクラス名のどちらかを必ず入れる(教室名だけでは、同じ教室の店と区別できない) -->
+  <g transform="rotate(-8 40 40)" fill="#1F6F8B">
+    <circle cx="40" cy="40" r="36" fill="none" stroke="#1F6F8B" stroke-width="5" />
+    <circle cx="40" cy="40" r="29" fill="none" stroke="#1F6F8B" stroke-width="1.5" />
+    <text x="40" y="49" font-family="sans-serif" font-weight="900" font-size="26" text-anchor="middle">R1A</text>
+  </g>
+</svg>

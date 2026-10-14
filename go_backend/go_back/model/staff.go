@@ -12,12 +12,12 @@ import (
 // URL の形はほかのスポットと同じ https://<ドメイン>/?spot=<トークン> なので、フロントエンドの変更はいらない。
 // どのスタッフのトークンで取ったかはスタンプに記録され、管理用 API(GET /api/admin/staff-stamps)とサーバーログで確認できる。
 //
-// - 非公開(小文字始まり)にしてあり、読み取りは ResolveQrToken / ResolveNfcUID 経由のみ。
-// - 起動時に validate.go がトークンの長さ・重複、SpotID の存在、スタッフ名の重複などをチェックする。
-// - トークンを変えると、そのスタッフのタグ・QR は書き直しになる(書き込み・印刷の前に確定させる)。
-//   スタッフ名は管理用 API・ログに出るだけなので、あとから変えてもよい。
-// - StampImage を登録すると、そのスタッフが押したマスにはかぼちゃの代わりにその画像が出る(GET /api/bingo の stamp_image)。
-//   画像は stamp_rally_front/public/stamps/ に置く。ユーザーに返すのはファイル名だけで、スタッフ名は返さない。
+//   - 非公開(小文字始まり)にしてあり、読み取りは ResolveQrToken / ResolveNfcUID 経由のみ。
+//   - 起動時に validate.go がトークンの長さ・重複、SpotID の存在、スタッフ名の重複などをチェックする。
+//   - トークンを変えると、そのスタッフのタグ・QR は書き直しになる(書き込み・印刷の前に確定させる)。
+//     スタッフ名は管理用 API・ログに出るだけなので、あとから変えてもよい。
+//   - StampImage を登録すると、そのスタッフが押したマスにはかぼちゃの代わりにその画像が出る(GET /api/bingo の stamp_image)。
+//     画像は stamp_rally_front/public/stamps/ に置く。ユーザーに返すのはファイル名だけで、スタッフ名は返さない。
 type staffToken struct {
 	SpotID     int    // スタンプを押すスポット
 	Staff      string // スタッフの名前(スポットの中で重複不可)
@@ -32,16 +32,20 @@ var staffTokens = []staffToken{
 	{SpotID: 1, Staff: "スタッフ3", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff3.svg"},
 }
 
-// stampImageOf は、スタンプを押したスタッフの画像のファイル名を返す
-// スタッフ別トークンで取ったスタンプでないとき・画像が未登録のときは空
+// stampImageOf は、取ったマスに出すスタンプ画像のファイル名を返す
+// 1. スタッフ別トークンで取ったスタンプで、そのスタッフの画像が登録されていれば、その画像
+// 2. そうでなければ、スポットの画像(Spot.StampImage)。どのスポットで取ったかが画像でわかる
+// どちらも未登録のときは空(フロントエンドはかぼちゃを出す)
 func stampImageOf(src StampSource) string {
-	if src.Staff == "" {
-		return ""
-	}
-	for _, st := range staffTokens {
-		if st.SpotID == src.SpotID && st.Staff == src.Staff {
-			return st.StampImage
+	if src.Staff != "" {
+		for _, st := range staffTokens {
+			if st.SpotID == src.SpotID && st.Staff == src.Staff && st.StampImage != "" {
+				return st.StampImage
+			}
 		}
+	}
+	if spot, ok := GetSpotByID(src.SpotID); ok {
+		return spot.StampImage
 	}
 	return ""
 }
