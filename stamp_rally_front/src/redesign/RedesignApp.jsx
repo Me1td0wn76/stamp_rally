@@ -36,7 +36,7 @@ const BOOT_FADE_MS = 350;
 // 特別室に入った記録（スタンプ取得 API の secret をそのまま保存する）。一度入った人は、かぼちゃのメニューからいつでも入れる
 const SPECIAL_KEY = 'rd.special';
 // 入り口の演出で git clone に出すコミット数（specialData.js の STATS のコミットと同じ数。数え直したらそろえる）
-const SPECIAL_COMMITS = 144;
+const SPECIAL_COMMITS = 152;
 
 function readSpecial() {
   try {

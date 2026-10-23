@@ -66,7 +66,7 @@ export function timeline(vars) {
 // word（ひとこと）と lang（好きな言語）は本人に書いてもらう。空のあいだは「準備中」と出す
 // stamp は CodeFlow のスタッフの印（public/stamps/ のファイル名。staff.go と同じ）
 export const MEMBERS = [
-  { name: 'Me1td0wn76', parts: ['プロジェクトの立ち上げ', 'バックエンドのひな形と MVC 化', 'README'], commits: 64, first: '2026-05-15',
+  { name: 'Me1td0wn76', parts: ['プロジェクトの立ち上げ', 'バックエンドのひな形と MVC 化', 'README'], commits: 72, first: '2026-05-15',
     word: '人生、だいたいJavaでなんとかなる。', lang: 'Java / TypeScript / Python', stamp: 'Me1td0wn76_stamp.png' },
   { name: 'Tongari-Boy', parts: ['スポットとビンゴの仕組み', '種類ごとのマスとランダムなスタンプ', 'QR コードでのスタンプ取得'], commits: 15, first: '2026-05-16', word: '', lang: '', stamp: 'UCI_stamp.png' },
   { name: 'syun17', parts: ['ユーザー ID の発行と Cookie 管理', 'セキュリティまわり', 'NFC・QR の読み取りの改善', 'ルーティング'], commits: 12, first: '2026-05-17', word: '', lang: '' },
@@ -78,9 +78,9 @@ export const MEMBERS = [
 
 // ---------------------------------------------------------------- メイキング
 export const STATS = [
-  { label: 'コミット', value: '144', unit: '回' },
+  { label: 'コミット', value: '152', unit: '回' },
   { label: 'プルリクエスト', value: '29', unit: '本' },
-  { label: 'コード', value: '8,545', unit: '行' },
+  { label: 'コード', value: '9,446', unit: '行' },
   { label: 'メンバー', value: '7', unit: '人' },
 ];
 export const NIGHT_OWL = { time: '1:52', date: '10/9', who: 'Sabigon-MA', what: 'デザイン作り直し用の画面を追加' };
