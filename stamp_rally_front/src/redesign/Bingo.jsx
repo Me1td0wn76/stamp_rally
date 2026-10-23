@@ -33,7 +33,8 @@ function StampMark({ image }) {
 
 // onChecked: ビンゴ状況を取るたびに、スタート済みかを親に知らせる（true / false: 未スタート(401) / null: 取得に失敗）。
 // 親は最初の結果で、遊び方を出すか（未スタートなら出す）を決める
-const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
+// onSecret: 特別室を開くスタッフのスタンプを取ったときに、応答の secret を渡して呼ぶ（親が入り口の演出を出す）
+const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
   // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
@@ -86,15 +87,16 @@ const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingS
 
   // スタンプ取得（URL から開いたとき用）。レスポンスのステータスを返す
   const acquireStamp = useCallback(async (kind, body) => {
-    const { status, message } = await postStamp(kind, body);
+    const { status, message, secret } = await postStamp(kind, body);
     if (status === 401) {
       handleUnauthorized();
       return status;
     }
     setMessage(message);
     if (status === 201) fetchBingo();
+    if (status === 201 && secret) onSecret?.(secret);
     return status;
-  }, [fetchBingo, handleUnauthorized]);
+  }, [fetchBingo, handleUnauthorized, onSecret]);
 
   // NFCタグ・QRコードの URL から開いたとき:スタート済みならトークンを送ってスタンプを取得する
   // 未スタート(401)ならトークンは残しておき、スタートして started が true になったら送り直す

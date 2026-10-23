@@ -29,7 +29,8 @@ function spotTokenFrom(text) {
 }
 
 // onNotStarted: 未スタート(401)だったときに、読んだトークンを渡して呼ぶ（親はトークンを預かってビンゴ画面へ移る）
-const Scan = ({ navigate, onNotStarted }) => {
+// onSecret: 特別室を開くスタッフのスタンプを取ったときに、応答の secret を渡して呼ぶ（QR・NFC どちらでも。親が入り口の演出を出す）
+const Scan = ({ navigate, onNotStarted, onSecret }) => {
   const [message, setMessage] = useState('');
   const [acquired, setAcquired] = useState(false);
   // カメラで QR コードを読んでいるか
@@ -45,13 +46,14 @@ const Scan = ({ navigate, onNotStarted }) => {
     sendingRef.current = true;
     setMessage('スタンプを送っています…');
     try {
-      const { status, message } = await postStamp('qr', { qr_token: token });
+      const { status, message, secret } = await postStamp('qr', { qr_token: token });
       if (status === 401) {
         onNotStarted(token);
         return;
       }
       setMessage(message);
       if (status === 201) setAcquired(true);
+      if (status === 201 && secret) onSecret?.(secret);
     } finally {
       sendingRef.current = false;
     }
