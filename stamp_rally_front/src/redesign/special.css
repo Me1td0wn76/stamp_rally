@@ -1,0 +1,207 @@
+/* =================================================================
+   特別室（SpecialEntry.jsx・SpecialRoom.jsx）。redesign.css のあとに読み込む。
+   色・紙の切り方・影は redesign.css の .rd の変数（--night・--paper・--orange・--cut-box など）をそのまま使う。
+   クラス名はすべて rd-sp- で始める。
+   ================================================================= */
+
+.rd { --mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; --term: #120A16; --term-line: #2A1C30; }
+
+/* -----------------------------------------------------------------
+   入室の演出（SpecialEntry.jsx）。ターミナル → 画面がとける → 扉と入室証
+   時間は JS が計算して、各行の --d（出る時刻）・--dur（打つ長さ）、全体の --melt・--door に入れる。
+   --freeze を足すと、その時刻まで進めた状態から始まる（「とばす」は最後まで進める。見本は .is-still で止める）
+   ----------------------------------------------------------------- */
+.rd-sp-entry { --freeze: 0ms; position: absolute; inset: 0; z-index: 260; overflow: hidden; background: var(--term); color: var(--paper); }
+.rd-sp-entry.is-still, .rd-sp-entry.is-still * { animation-play-state: paused !important; }
+
+/* ターミナル */
+.rd-sp-term { position: absolute; inset: 0; display: flex; flex-direction: column; padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 24px;
+  background: var(--term) repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, .025) 3px 4px);
+  animation: rd-sp-shake .45s linear calc(var(--melt) - 450ms - var(--freeze)) both, rd-sp-sink .9s cubic-bezier(.5, 0, .9, .4) calc(var(--melt) + 250ms - var(--freeze)) both; }
+.rd-sp-bar-top { display: flex; align-items: center; gap: 6px; margin: 0 -16px 12px; padding: 0 16px 10px; border-bottom: 1px dashed var(--term-line); font: 500 12px/1 var(--mono); color: var(--kraft2); }
+.rd-sp-bar-top i { width: 10px; height: 10px; border-radius: 50%; background: var(--orange); }
+.rd-sp-bar-top i:nth-child(2) { background: var(--gold); }
+.rd-sp-bar-top i:nth-child(3) { background: #4E6B2A; }
+.rd-sp-bar-top span { margin-left: 6px; }
+.rd-sp-lines { display: flex; flex-direction: column; gap: 3px; font: 500 13px/1.55 var(--mono); }
+.rd-sp-ln { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; text-shadow: 0 0 6px rgba(246, 231, 200, .25);
+  animation: rd-sp-show 1ms linear calc(var(--d) - var(--freeze)) both; }
+.rd-sp-ln--cmd { margin-top: 8px; color: var(--paper); }
+.rd-sp-ln--cmd:first-child { margin-top: 0; }
+.rd-sp-ps { color: var(--gold); }
+.rd-sp-ln--out { padding-left: 2ch; color: var(--kraft2); }
+.rd-sp-ln--warn { padding-left: 2ch; color: var(--orange); text-shadow: 0 0 8px rgba(238, 122, 43, .55); }
+.rd-sp-ln--err { padding-left: 2ch; color: #F2B8C6; }
+.rd-sp-ln--ok { padding-left: 2ch; color: var(--gold); }
+.rd-sp-ln--pw { padding-left: 2ch; color: var(--kraft2); }
+.rd-sp-ln--bar { padding-left: 2ch; display: flex; align-items: center; gap: 10px; color: var(--kraft2); }
+/* 1文字ずつ打つ（等幅なので 1ch ずつ広げる） */
+.rd-sp-type { display: inline-block; vertical-align: bottom; max-width: 100%; overflow: hidden; white-space: nowrap; width: calc(var(--n) * 1ch);
+  animation: rd-sp-type var(--dur) steps(var(--n)) calc(var(--d) - var(--freeze)) both; }
+/* 打っている間だけ出るカーソル */
+.rd-sp-ln--cmd::after, .rd-sp-ln--pw::after { content: ""; display: inline-block; width: .6em; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--paper);
+  animation: rd-sp-caret calc(var(--dur) + 180ms) steps(1, end) calc(var(--d) - var(--freeze)) both; }
+.rd-sp-meter { flex: none; display: grid; grid-template-columns: repeat(10, 7px); gap: 2px; padding: 2px; box-shadow: inset 0 0 0 1px var(--kraft); }
+.rd-sp-meter i { height: 9px; background: var(--gold); transform-origin: left; animation: rd-sp-grow 1ms linear calc(var(--d) + var(--i) * 26ms - var(--freeze)) both; }
+.rd-sp-meter.is-hot i { background: var(--orange); box-shadow: 0 0 6px rgba(238, 122, 43, .8); }
+@keyframes rd-sp-show { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rd-sp-type { from { width: 0; } }
+@keyframes rd-sp-caret { from { opacity: 1; } to { opacity: 0; } }
+@keyframes rd-sp-grow { from { transform: scaleX(0); } }
+@keyframes rd-sp-shake { 0%, 100% { transform: translate(0); } 20% { transform: translate(-3px, 1px); } 40% { transform: translate(3px, -1px); } 60% { transform: translate(-2px, 2px); } 80% { transform: translate(2px, -1px); } }
+@keyframes rd-sp-sink { to { transform: translateY(26%) scaleY(1.25); filter: blur(2px); opacity: 0; } }
+
+/* 画面がとける：上からかぼちゃ色が流れ落ちて画面をおおい、下へ抜けていく */
+.rd-sp-melt { position: absolute; left: -2%; right: -2%; top: 0; z-index: 2; height: 140%; pointer-events: none;
+  animation: rd-sp-pour var(--melt-len, 1500ms) cubic-bezier(.45, 0, .55, 1) calc(var(--melt) - var(--freeze)) both; }
+.rd-sp-melt svg { display: block; width: 100%; height: 100%; }
+@keyframes rd-sp-pour { 0% { transform: translateY(-101%); } 46%, 58% { transform: translateY(0); } 100% { transform: translateY(72%); } }
+
+/* 扉と入室証 */
+.rd-sp-door { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 22px calc(28px + env(safe-area-inset-bottom, 0px)); background: var(--night); color: var(--paper); text-align: center;
+  animation: rd-sp-show 1ms linear calc(var(--melt) + 700ms - var(--freeze)) both; }
+.rd-sp-door .rd-night { position: absolute; inset: 0; }
+.rd-sp-door > * { position: relative; }
+.rd-sp-sign { padding: 4px 16px 6px; background: var(--gold); color: var(--ink); font: 400 18px/1.3 var(--display); clip-path: var(--cut-tag); transform: rotate(-2deg); filter: var(--shadow); }
+.rd-sp-gate { width: 150px; height: 168px; margin-bottom: -46px; filter: var(--shadow); }
+.rd-sp-gate .rd-sp-leaf { transform-box: fill-box; animation: rd-sp-open .9s cubic-bezier(.3, 0, .2, 1) calc(var(--door) + 1300ms - var(--freeze)) both; }
+.rd-sp-gate .rd-sp-leaf--l { transform-origin: left center; }
+.rd-sp-gate .rd-sp-leaf--r { transform-origin: right center; --sk: 8deg; }
+@keyframes rd-sp-open { to { transform: scaleX(.18) skewY(var(--sk, -8deg)); } }
+.rd-sp-gate .rd-sp-glow { opacity: 0; animation: rd-sp-show 1ms linear calc(var(--door) + 1300ms - var(--freeze)) both; }
+/* 入室証：紙のカード。最後にスタッフの印がぺたんと押される */
+.rd-sp-pass { width: min(100%, 300px); padding: 16px 18px 18px; text-align: left; color: var(--ink); transform: rotate(-2deg);
+  animation: rd-card-in .45s cubic-bezier(.2, 1.3, .4, 1) calc(var(--door) - var(--freeze)) both; }
+.rd-sp-pass .rd-sp-pass-head, .rd-sp-photo .rd-sp-pass-head { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: var(--orange2); }
+.rd-sp-pass .rd-sp-pass-no, .rd-sp-photo .rd-sp-pass-no { font: 400 36px/1.15 var(--display); font-variant-numeric: tabular-nums; }
+.rd-sp-pass .rd-dl { grid-template-columns: 3.4em minmax(0, 1fr); font-size: 13px; margin-top: 4px; padding-right: 74px; }
+.rd-sp-pass-stamp { position: absolute; right: 12px; bottom: 10px; width: 76px; height: 76px; object-fit: contain; transform: rotate(-10deg);
+  animation: rd-sp-press .4s cubic-bezier(.2, .9, .3, 1.2) calc(var(--door) + 650ms - var(--freeze)) both; }
+@keyframes rd-sp-press { 0% { opacity: 0; transform: scale(2.2) rotate(-24deg); } 70% { opacity: 1; transform: scale(.92) rotate(-8deg); } 100% { opacity: 1; transform: scale(1) rotate(-10deg); } }
+.rd-sp-door .rd-note { max-width: 300px; animation: rd-sp-show 1ms linear calc(var(--door) + 1100ms - var(--freeze)) both; }
+.rd-sp-door .rd-btn { align-self: stretch; max-width: 320px; margin: 0 auto; width: 100%; animation: rd-sp-show 1ms linear calc(var(--door) + 1100ms - var(--freeze)) both; }
+/* とばす：扉が出たら消える */
+.rd-sp-skip { position: absolute; z-index: 3; right: 14px; top: calc(10px + env(safe-area-inset-top, 0px)); min-height: 36px; padding: 4px 14px; font-size: 13px;
+  animation: rd-sp-hide 1ms linear calc(var(--melt) - var(--freeze)) both; }
+@keyframes rd-sp-hide { to { opacity: 0; visibility: hidden; } }
+
+/* -----------------------------------------------------------------
+   特別室（SpecialRoom.jsx）
+   ----------------------------------------------------------------- */
+/* 画面の中身（.rd-scroll の縦並び）が縮んで中が切れないように */
+.rd-sp-scene, .rd-sp-menu, .rd-sp-cards, .rd-sp-stats, .rd-sp-owl, .rd-sp-hist, .rd-sp-gal, .rd-sp-tty, .rd-sp-chips, .rd-sp-photo, .rd-sp-tty > * { flex-shrink: 0; }
+
+/* 部屋の絵：置いてあるものを押すと中身が開く */
+.rd-sp-scene { position: relative; isolation: isolate; filter: var(--shadow); }
+.rd-sp-scene::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper); clip-path: var(--cut-box); }
+.rd-sp-scene-art { display: block; width: 100%; height: auto; padding: 8px; }
+.rd-sp-hot { position: absolute; display: flex; align-items: flex-end; justify-content: center; padding: 0 0 2px; border: 0; background: none; cursor: pointer; }
+.rd-sp-hot:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.rd-sp-hot:active .rd-sp-tag { transform: translateY(2px); }
+.rd-sp-tag { padding: 1px 8px 2px; background: var(--gold); font-size: 11px; font-weight: 900; line-height: 1.45; color: var(--ink); clip-path: var(--cut-tag); white-space: nowrap; filter: drop-shadow(0 2px 0 rgba(20, 8, 20, .45)); }
+.rd-sp-hot.is-new .rd-sp-tag { animation: rd-sp-bounce 1.6s ease-in-out infinite; }
+.rd-sp-hot:disabled { cursor: default; }
+.rd-sp-hot:disabled .rd-sp-tag { background: var(--kraft); color: var(--ink2); }
+@keyframes rd-sp-bounce { 0%, 70%, 100% { transform: translateY(0); } 80% { transform: translateY(-4px); } 90% { transform: translateY(0); } }
+/* 絵の中でゆっくり動くもの */
+.rd-sp-steam { animation: rd-sp-steam 2.4s ease-in-out infinite; }
+.rd-sp-cursor { animation: rd-sp-blink 1s steps(1) infinite; }
+.rd-sp-moonlit { animation: rd-moonglow 5s ease-in-out infinite; }
+@keyframes rd-sp-steam { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-3px); opacity: .5; } }
+@keyframes rd-sp-blink { 50% { opacity: 0; } }
+
+/* 部屋の下のボタン（絵と同じ中身。押しやすさと読み上げのため） */
+.rd-sp-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rd-sp-menu .rd-btn { justify-content: flex-start; padding-left: 14px; }
+.rd-sp-menu .rd-btn--soon { min-height: 40px; font-size: 13px; }
+.rd-sp-menu .rd-btn--soon::after { content: "準備中"; margin-left: auto; padding: 0 6px; background: var(--kraft); font-size: 10px; font-weight: 900; clip-path: var(--cut-tag); }
+
+/* メンバー：トレカ。押すと裏返る */
+.rd-sp-cards { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+.rd-sp-card { position: relative; width: 100%; aspect-ratio: 63 / 92; padding: 0; border: 0; background: none; color: var(--ink) !important; cursor: pointer; perspective: 700px; text-align: left; }
+.rd-sp-card-in { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.3, 1.2, .5, 1); }
+.rd-sp-card.is-flipped .rd-sp-card-in { transform: rotateY(180deg); }
+.rd-sp-face { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 6px; padding: 12px 11px 11px; backface-visibility: hidden; -webkit-backface-visibility: hidden; filter: var(--shadow); isolation: isolate; }
+.rd-sp-face::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper); clip-path: var(--cut-box); }
+.rd-sp-face::after { content: ""; position: absolute; inset: 6px; z-index: -1; border: 2px solid var(--gold); clip-path: var(--cut-box); }
+.rd-sp-face--back { transform: rotateY(180deg); gap: 5px; }
+.rd-sp-face--back::before { background: var(--paper2); }
+.rd-sp-ava { position: relative; align-self: center; width: 78px; height: 78px; margin-top: 2px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 3px var(--ink); display: grid; place-items: center; overflow: hidden; font: 400 28px/1 var(--display); color: var(--ink); }
+.rd-sp-ava img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.rd-sp-card h2 { font: 400 15px/1.3 var(--display); text-align: center; overflow-wrap: anywhere; }
+.rd-sp-role { align-self: center; padding: 1px 8px 2px; background: var(--gold2); font-size: 11px; font-weight: 900; line-height: 1.45; color: var(--ink); text-align: center; clip-path: var(--cut-tag); }
+.rd-sp-no { font: 500 11px/1 var(--mono); color: var(--orange2); }
+.rd-sp-commits { margin-top: auto; display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: baseline; gap: 4px 6px; font-size: 11px; font-weight: 900; color: var(--ink2); }
+.rd-sp-commits i { align-self: center; }
+.rd-sp-commits b { font: 400 16px/1 var(--display); color: var(--orange2); }
+.rd-sp-commits i { height: 6px; background: var(--deep); clip-path: var(--cut-btn); }
+.rd-sp-commits i::before { content: ""; display: block; width: var(--w); height: 100%; background: var(--orange); }
+.rd-sp-mark { position: absolute; right: 6px; top: 6px; width: 34px; height: 34px; object-fit: contain; transform: rotate(10deg); filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25)); }
+.rd-sp-face--back h2 { text-align: left; font-size: 14px; }
+.rd-sp-face--back ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.rd-sp-face--back li { padding: 1px 7px 2px; background: var(--gold2); font-size: 10px; font-weight: 900; line-height: 1.4; clip-path: var(--cut-tag); }
+.rd-sp-back-dl { display: grid; grid-template-columns: 4.6em minmax(0, 1fr); gap: 2px 6px; margin-top: auto; font-size: 10.5px; line-height: 1.45; }
+.rd-sp-back-dl dt { font-weight: 700; color: var(--ink2); }
+.rd-sp-back-dl dd { font-weight: 900; overflow-wrap: anywhere; }
+.rd-sp-back-dl dd.is-empty { color: #8A6E4F; font-weight: 700; }
+.rd-sp-word { font: 400 12px/1.5 var(--display); }
+
+/* メイキング：数字・夜ふかし・年表・ボツ案 */
+.rd-sp-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rd-sp-stat { padding: 12px 14px; align-items: flex-start; gap: 0; }
+.rd-sp-stat span { font-size: 12px; font-weight: 900; color: var(--ink2); }
+.rd-sp-stat b { font: 400 30px/1.1 var(--display); color: var(--orange2); font-variant-numeric: tabular-nums; }
+.rd-sp-stat small { font-size: 12px; font-weight: 900; margin-left: 2px; color: var(--ink); }
+.rd-sp-owl { flex-direction: row; align-items: center; gap: 12px; --pc: var(--deep); color: var(--paper); }
+.rd-sp-owl svg { flex: none; width: 46px; height: 46px; }
+.rd-sp-owl p { color: var(--paper); font-size: 13px; }
+.rd-sp-owl b { display: block; font: 400 26px/1.15 var(--display); color: var(--gold); }
+.rd-sp-hist { list-style: none; padding: 4px 0 0 18px; display: flex; flex-direction: column; gap: 12px; border-left: 3px dashed var(--kraft); margin-left: 8px; }
+.rd-sp-hist li { position: relative; display: grid; grid-template-columns: 3.6em minmax(0, 1fr); gap: 8px; align-items: start; color: var(--paper); font-size: 13px; font-weight: 700; line-height: 1.55; }
+.rd-sp-hist li::before { content: ""; position: absolute; left: -27px; top: 4px; width: 13px; height: 13px; background: var(--gold); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.rd-sp-hist time { font: 400 15px/1.35 var(--display); color: var(--gold); }
+.rd-sp-hist li.is-now { color: var(--gold2); }
+.rd-sp-hist li.is-now::before { background: var(--orange); width: 17px; height: 17px; left: -29px; top: 2px; animation: rd-twinkle 2.4s ease-in-out infinite; }
+.rd-sp-gal { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rd-sp-gal figure { position: relative; margin: 0; padding: 6px 6px 8px; display: flex; flex-direction: column; gap: 4px; color: var(--ink); isolation: isolate; filter: var(--shadow); }
+.rd-sp-gal figure::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper); clip-path: var(--cut-box); }
+.rd-sp-gal li:nth-child(1) figure { transform: rotate(-2deg); }
+.rd-sp-gal li:nth-child(3) figure { transform: rotate(2deg); }
+.rd-sp-gal img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; object-position: top; background: var(--paper2); }
+.rd-sp-gal figcaption { font-size: 11px; font-weight: 900; line-height: 1.35; }
+.rd-sp-gal figcaption small { display: block; font-size: 10px; font-weight: 700; color: var(--ink2); }
+.rd-sp-gal .is-now figcaption::after { content: "いま"; position: absolute; right: -4px; top: -8px; padding: 0 7px 1px; background: var(--orange); font-size: 11px; clip-path: var(--cut-tag); transform: rotate(8deg); }
+.rd-sp-src { font-size: 11px; font-weight: 700; color: var(--kraft2); text-align: right; }
+.rd-sp-h { font: 400 20px/1.3 var(--display); color: var(--paper); }
+
+/* 自由に打てるターミナル */
+.rd-sp-tty { position: relative; display: flex; flex-direction: column; gap: 3px; min-height: 340px; padding: 12px 14px 10px; background: var(--term) repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, .025) 3px 4px); color: var(--paper); font: 500 13px/1.55 var(--mono); clip-path: var(--cut-box); filter: var(--shadow); }
+.rd-sp-tty .rd-sp-ln { animation: none; }
+.rd-sp-tty .rd-sp-ln--cmd::after { content: none; }
+.rd-sp-tty pre { margin: 0; font: inherit; color: var(--orange); white-space: pre; overflow-x: auto; }
+.rd-sp-prompt { display: flex; align-items: center; gap: 1ch; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--term-line); }
+.rd-sp-prompt input { flex: 1; min-width: 0; min-height: 36px; padding: 0; border: 0; background: none; color: var(--paper); font: inherit; caret-color: var(--gold); outline: none; }
+.rd-sp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.rd-sp-chips button { min-height: 36px; padding: 4px 12px; border: 0; background: var(--paper2); color: var(--ink) !important; font: 500 13px var(--mono); clip-path: var(--cut-tag); cursor: pointer; }
+.rd-sp-chips button:active { transform: translateY(2px); }
+
+/* 記念写真：入室証をチェキのような写真にする */
+.rd-sp-photo { align-self: center; width: min(100%, 300px); padding: 14px 14px 18px; gap: 10px; transform: rotate(-1.5deg); }
+.rd-sp-photo-pic { position: relative; display: flex; flex-direction: column; gap: 12px; min-height: 230px; padding: 16px 16px 18px; background: var(--night); color: var(--paper); }
+.rd-sp-photo .rd-sp-photo-pic .rd-sp-pass-head { color: var(--gold); }
+.rd-sp-photo .rd-sp-photo-pic .rd-sp-pass-no { color: var(--paper); font-size: 34px; }
+.rd-sp-photo .rd-sp-photo-pic p { font-size: 12px; font-weight: 700; color: var(--kraft2); }
+.rd-sp-mini { display: grid; grid-template-columns: repeat(3, 26px); gap: 4px; }
+.rd-sp-mini span { height: 26px; border: 2px dashed var(--kraft); background: var(--paper2); }
+.rd-sp-mini span.is-on { border: 2px solid var(--orange); background: var(--gold2); }
+.rd-sp-mini span.is-line { background: var(--gold); }
+.rd-sp-photo-stamp { position: absolute; right: -6px; bottom: -14px; width: 118px; height: 118px; object-fit: contain; transform: rotate(-12deg); filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .3)); }
+.rd-sp-photo-cap { font: 400 15px/1.4 var(--display); text-align: center; color: var(--ink); }
+
+/* 動きを減らす設定：演出は最後の形（扉と入室証）だけを見せ、部屋の中の動きも止める */
+@media (prefers-reduced-motion: reduce) {
+  .rd-sp-entry { --freeze: 60000ms !important; }
+  .rd-sp-steam, .rd-sp-cursor, .rd-sp-moonlit, .rd-sp-hot.is-new .rd-sp-tag, .rd-sp-hist li.is-now::before { animation: none; }
+  .rd-sp-card-in { transition: none; }
+}
