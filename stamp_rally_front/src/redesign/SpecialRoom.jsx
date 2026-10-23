@@ -222,7 +222,7 @@ function pumpkinsay(text) {
   return [` ${'_'.repeat(w + 2)}`, `< ${t} >`, ` ${'-'.repeat(w + 2)}`, '      \\   _\\/_', '       \\ /  ^  ^ \\', '        |  \\_/\\_/ |', "         '-.____.-'"].join('\n');
 }
 
-export function runCommand(input, ctx) {
+function runCommand(input, ctx) {
   const [cmd, ...args] = input.trim().split(/\s+/);
   const arg = args.join(' ');
   switch (cmd) {
