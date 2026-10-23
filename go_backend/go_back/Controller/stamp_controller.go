@@ -57,8 +57,8 @@ func PostStamp(c *gin.Context) {
 
 	// ビジネスロジック（スタンプ取得処理）はmodelに任せる
 	// コントローラーはリクエストとレスポンスの変換だけを担当するのがGoの一般的な設計
-	// (スポットIDだけでは誰が押したかわからないので、スタッフは空になる)
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), model.StampSource{SpotID: req.SpotID})
+	// (スポットIDだけでは誰が押したかわからないので、スタッフは空になる。隠し画面も開かない)
+	stamp, _, status, errMsg := model.AcquireStamp(userIDFrom(c), model.StampSource{SpotID: req.SpotID})
 
 	// errMsg が空でなければ何らかのエラーが起きている（スポット不正・二重取得など）
 	if errMsg != "" {
@@ -67,6 +67,14 @@ func PostStamp(c *gin.Context) {
 	}
 	// 201 Created：新しいリソース（スタンプ）が作成されたことを示すステータスコード
 	c.JSON(http.StatusCreated, stamp)
+}
+
+// StampResponse は QR・NFC でスタンプを取ったときの 201 の応答
+// Stamp の JSON はそのまま(埋め込みなので spot_id などは同じ階層に出る。staff は今までどおり返さない)で、
+// 隠し画面を開くスタッフ(staff.go の Secret)のスタンプのときだけ secret を足す
+type StampResponse struct {
+	model.Stamp
+	Secret *model.Secret `json:"secret,omitempty"`
 }
 
 // PostStampByNfcはNFCタグのUIDを使ってスタンプを取得するハンドラー
@@ -88,12 +96,12 @@ func PostStampByNfc(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
+	stamp, secret, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
 	}
-	c.JSON(http.StatusCreated, stamp)
+	c.JSON(http.StatusCreated, StampResponse{Stamp: *stamp, Secret: secret})
 }
 
 // PostStampByQr はQRコードの読み取りトークンを使ってスタンプを取得するハンドラー
@@ -115,12 +123,12 @@ func PostStampByQr(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
+	stamp, secret, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
 	}
-	c.JSON(http.StatusCreated, stamp)
+	c.JSON(http.StatusCreated, StampResponse{Stamp: *stamp, Secret: secret})
 }
 
 // GetUserStamps は指定ユーザーの取得済みスタンプ一覧を返すハンドラー

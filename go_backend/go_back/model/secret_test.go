@@ -1,0 +1,129 @@
+package model
+
+import (
+	"fmt"
+	"net/http"
+	"testing"
+)
+
+// resetSecretRoomNos は、入室番号を 1 から数え直す(テストが終わったら元に戻す)
+func resetSecretRoomNos(t *testing.T) {
+	t.Helper()
+	Mu.Lock()
+	saved := secretRoomNos
+	secretRoomNos = make(map[string]map[string]int)
+	Mu.Unlock()
+	t.Cleanup(func() {
+		Mu.Lock()
+		secretRoomNos = saved
+		Mu.Unlock()
+	})
+}
+
+// firstSecretStaff は、隠し画面を開くスタッフ(Secret のあるスタッフ)を返す
+func firstSecretStaff(t *testing.T) staffToken {
+	t.Helper()
+	for _, st := range staffTokens {
+		if st.Secret != "" {
+			return st
+		}
+	}
+	t.Fatal("no staff with a secret")
+	return staffToken{}
+}
+
+// acquireForTest は、テスト用のユーザーでスタンプを取る(取ったスタンプはテストが終わったら消す)
+func acquireForTest(t *testing.T, userID string, src StampSource) *Secret {
+	t.Helper()
+	setTestStamps(t, userID, nil)
+	_, secret, status, errMsg := AcquireStamp(userID, src)
+	if status != http.StatusCreated {
+		t.Fatalf("AcquireStamp(%s): status %d (%s), want 201", describeSource(src), status, errMsg)
+	}
+	return secret
+}
+
+// secret が付くのは、Secret のあるスタッフのスタンプを取ったときだけ
+func TestSecretOnlyForSecretStaff(t *testing.T) {
+	resetSecretRoomNos(t)
+
+	for i, st := range staffTokens {
+		src := StampSource{SpotID: st.SpotID, Staff: st.Staff}
+		secret := acquireForTest(t, fmt.Sprintf("secret-test-staff-%d", i), src)
+		if st.Secret == "" {
+			if secret != nil {
+				t.Errorf("%s has no secret, but got %+v", describeSource(src), secret)
+			}
+			continue
+		}
+		if secret == nil {
+			t.Fatalf("%s has secret %q, but got nil", describeSource(src), st.Secret)
+		}
+		// スタンプは取ったばかりの 1 つだけ
+		want := Secret{Room: st.Secret, No: secret.No, Staff: st.Staff, StampImage: st.StampImage, Stamps: 1}
+		if *secret != want {
+			t.Errorf("%s: got %+v, want %+v", describeSource(src), *secret, want)
+		}
+	}
+
+	// スタッフ別トークンを使わないスポットには付かない
+	spot := firstSpotWithoutStaff(t)
+	if secret := acquireForTest(t, "secret-test-spot", StampSource{SpotID: spot.ID}); secret != nil {
+		t.Errorf("spot %d: got %+v, want nil", spot.ID, secret)
+	}
+}
+
+// stamps は、取ったあとのその人のスタンプの数。同じスタンプをもう一度読んだとき(409)は secret なし
+func TestSecretStampsCountAndConflict(t *testing.T) {
+	resetSecretRoomNos(t)
+	const userID = "secret-test-count"
+	st := firstSecretStaff(t)
+	src := StampSource{SpotID: st.SpotID, Staff: st.Staff}
+
+	// ほかのスポットで 1 つ取ってから、隠し画面を開くスタンプを取る
+	spot := firstSpotWithoutStaff(t)
+	acquireForTest(t, userID, StampSource{SpotID: spot.ID})
+	_, secret, status, _ := AcquireStamp(userID, src)
+	if status != http.StatusCreated || secret == nil {
+		t.Fatalf("got status %d, secret %+v, want 201 with a secret", status, secret)
+	}
+	if secret.Stamps != 2 {
+		t.Errorf("stamps: got %d, want 2", secret.Stamps)
+	}
+
+	_, secret, status, _ = AcquireStamp(userID, src)
+	if status != http.StatusConflict || secret != nil {
+		t.Errorf("second time: got status %d, secret %+v, want 409 without a secret", status, secret)
+	}
+}
+
+// 同じ人には同じ番号、別の人には次の番号
+func TestSecretRoomNo(t *testing.T) {
+	resetSecretRoomNos(t)
+	st := firstSecretStaff(t)
+	src := StampSource{SpotID: st.SpotID, Staff: st.Staff}
+
+	users := []string{"secret-test-no-a", "secret-test-no-b", "secret-test-no-c"}
+	for i, userID := range users {
+		secret := acquireForTest(t, userID, src)
+		if secret == nil {
+			t.Fatalf("%s: got nil secret", userID)
+		}
+		if want := i + 1; secret.No != want {
+			t.Errorf("%s: no = %d, want %d", userID, secret.No, want)
+		}
+	}
+
+	// もう一度数えても、同じ人は同じ番号のまま(人数も増えない)
+	Mu.Lock()
+	again := secretFor(users[0], src)
+	again2 := secretFor(users[0], src)
+	next := secretFor("secret-test-no-d", src)
+	Mu.Unlock()
+	if again.No != 1 || again2.No != 1 {
+		t.Errorf("same user: got no %d and %d, want 1", again.No, again2.No)
+	}
+	if next.No != len(users)+1 {
+		t.Errorf("next user: no = %d, want %d", next.No, len(users)+1)
+	}
+}
