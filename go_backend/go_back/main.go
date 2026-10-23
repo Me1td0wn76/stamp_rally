@@ -30,7 +30,8 @@ func main() {
 	// ルートグループ：/api というプレフィックスをまとめて付けられる
 	// 例：api.GET("/spots") → 実際のURLは /api/spots になる
 	// APIのURLを /api 以下にまとめることで、将来的にバージョン管理（/api/v2/...）などがしやすくなる
-	api := r.Group("/api")
+	// CountRequests は、受けたリクエストの数と返事にかかった時間を数える（特別室の「しくみ」に出す）
+	api := r.Group("/api", controller.CountRequests())
 	{
 		// GET /api/spots：スポット一覧を取得する
 		api.GET("/spots", controller.GetSpots)
@@ -65,6 +66,9 @@ func main() {
 
 			// GET /api/special-room/live：特別室の「いまの会場」の数字を返す(特別室に入った人だけ。ほかは 403)
 			user.GET("/special-room/live", controller.GetSpecialRoomLive)
+
+			// GET /api/special-room/how：特別室の「しくみ」に出すサーバーの中の数字を返す(特別室に入った人だけ。ほかは 403)
+			user.GET("/special-room/how", controller.GetSpecialRoomHow)
 		}
 
 		// ここから下は管理用API(環境変数 ADMIN_PASSWORD を設定したときだけ有効)

@@ -28,6 +28,15 @@ type SecretRoomLive struct {
 	Stamps   int `json:"stamps"`   // 会場全体で押されたスタンプの数
 }
 
+// IsSecretRoomEntrant は、userID が room に入った人(入室番号がある人)かを返す
+func IsSecretRoomEntrant(userID, room string) bool {
+	Mu.Lock()
+	defer Mu.Unlock()
+
+	_, ok := secretRoomNos[room][userID]
+	return ok
+}
+
 // GetSecretRoomLive は、room に入った人(入室番号がある人)に会場の数字を返す。入っていない人は false
 // 呼ばれた時刻(now)を、その人がこの部屋にいた時刻として覚える
 func GetSecretRoomLive(userID, room string, now time.Time) (SecretRoomLive, bool) {

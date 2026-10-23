@@ -269,3 +269,20 @@ func TestSecretRoomLive(t *testing.T) {
 		t.Errorf("a: stamps %d, players %d, want %d, %d", a.Stamps, a.Players, stamps, userCount())
 	}
 }
+
+// 「しくみ」を見られるのは、特別室に入った人だけ
+func TestIsSecretRoomEntrant(t *testing.T) {
+	resetSecretRoomNos(t)
+	st := firstSecretStaff(t)
+	acquireForTest(t, "secret-entrant-a", StampSource{SpotID: st.SpotID, Staff: st.Staff})
+	setTestStamps(t, "secret-entrant-none", nil)
+	if !IsSecretRoomEntrant("secret-entrant-a", st.Secret) {
+		t.Error("entrant: got false, want true")
+	}
+	if IsSecretRoomEntrant("secret-entrant-none", st.Secret) {
+		t.Error("not entered: got true, want false")
+	}
+	if IsSecretRoomEntrant("secret-entrant-a", "other-room") {
+		t.Error("other room: got true, want false")
+	}
+}
