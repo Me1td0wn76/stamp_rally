@@ -99,7 +99,7 @@ var (
 		{ID: 1, Name: "コードフロー", Description: "402・コードフロー", Type: "codeflow", Floor: "4階", Place: "402教室", Intro: ""},
 		{ID: 2, Name: "焼きそば屋", Description: "テラス・R4A", Type: "food", QrToken: "fdsjX4-YBuwr-skFW-S6yw", StampImage: "spot2.svg", Floor: "", Place: "テラス", Intro: ""},
 		{ID: 3, Name: "Francfranc ～細田、焼いてます～", Description: "R4B・501.2", Type: "food", QrToken: "rCEmVG1XMrID4hsn_GtTQg", StampImage: "spot3.svg", Floor: "5階", Place: "501・502教室", Intro: ""},
-		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw", StampImage: "spot4.svg", Floor: "3階", Place: "301教室", Intro: ""},
+		{ID: 4, Name: "ダーツベイダー2", Description: "R3A・301", Type: "activity", QrToken: "4vRhgi7472sSF2XaPM54pw", StampImage: "R3A.png", Floor: "3階", Place: "301教室", Intro: ""},
 		{ID: 5, Name: "玉田のカリカリ大作戦！", Description: "R3B・303", Type: "food", QrToken: "AP_yrQaLY9PktV6fOYKWYw", StampImage: "spot5.svg", Floor: "3階", Place: "303教室", Intro: ""},
 		{ID: 6, Name: "(仮)アン・ボール", Description: "R2A・302", Type: "activity", QrToken: "Ag2ClMibWLo6_NMW8WWQ6A", StampImage: "spot6.svg", Floor: "3階", Place: "302教室", Intro: ""},
 		{ID: 7, Name: "野木の甘ーいチュロス", Description: "R2B・501.2", Type: "food", QrToken: "7W4tCa5_zRbdeWwMyFIAww", StampImage: "spot7.svg", Floor: "5階", Place: "501・502教室", Intro: ""},
