@@ -60,6 +60,9 @@ func main() {
 			// GET /api/zukan：ユーザーのスタンプ図鑑(全スポットと、それぞれスタンプを取ったか)を返す
 			user.GET("/zukan", controller.GetZukan)
 
+			// GET /api/special-room：特別室のカギを持っている人に、入室の記録(入室番号など)を返す(カギがなければ 403)
+			user.GET("/special-room", controller.GetSpecialRoom)
+
 			// GET /api/special-room/live：特別室の「いまの会場」の数字を返す(特別室に入った人だけ。ほかは 403)
 			user.GET("/special-room/live", controller.GetSpecialRoomLive)
 		}

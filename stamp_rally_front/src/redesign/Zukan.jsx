@@ -39,7 +39,8 @@ function StampArt({ image, special = false, className = '' }) {
 
 // 取ったスポットの詳細。画面いちばん上の層（<dialog> の showModal）に出すので、かぼちゃのメニューより上に重なる
 // 閉じるのは「閉じる」・外側を押す・Esc（どれも dialog の close イベント → onClose）
-function StampDetail({ entry, onClose }) {
+// onOpenSpecial: 特別室に入り直す（特別室のカギのスタンプのときだけ「特別室に入る」を出す）
+function StampDetail({ entry, onClose, onOpenSpecial }) {
   const ref = useRef(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -72,13 +73,17 @@ function StampDetail({ entry, onClose }) {
           {entry.place && <><dt>場所</dt><dd>{entry.place}</dd></>}
           {entry.stamped_at && <><dt>獲得</dt><dd>{stampedAtFormat.format(new Date(entry.stamped_at))}</dd></>}
         </dl>
+        {entry.special && onOpenSpecial && (
+          <button type="button" className="rd-btn rd-sp-go" onClick={() => { close(); onOpenSpecial(); }}><Glitter />✦ 特別室に入る ✦</button>
+        )}
         <button type="button" className="rd-btn rd-btn--pri" onClick={close}>閉じる</button>
       </div>
     </dialog>
   );
 }
 
-const Zukan = ({ navigate, openGuide }) => {
+// onOpenSpecial: 特別室に入り直す（特別室のカギのスタンプの詳細から）
+const Zukan = ({ navigate, openGuide, onOpenSpecial }) => {
   // null: 確認中 / 配列: 図鑑（全スポット分）
   const [entries, setEntries] = useState(null);
   // 未スタート(401)か
@@ -197,7 +202,7 @@ const Zukan = ({ navigate, openGuide }) => {
       )}
       <button type="button" className="rd-btn" onClick={() => navigate('bingo')}>← ビンゴに戻る</button>
 
-      {selected && <StampDetail entry={selected} onClose={() => setSelected(null)} />}
+      {selected && <StampDetail entry={selected} onClose={() => setSelected(null)} onOpenSpecial={onOpenSpecial} />}
     </>
   );
 };

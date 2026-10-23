@@ -111,6 +111,28 @@ func secretFor(userID string, src StampSource) *Secret {
 	return &Secret{Room: st.Secret, No: no, Staff: st.Staff, StampImage: st.StampImage, Stamps: len(Stamps[userID])}
 }
 
+// heldSecret は、userID が room のカギ(その隠し画面を開くスタッフのスタンプ)を持っていれば、その Secret を返す(なければ nil)
+// 入室番号は、カギを取ったときに振った番号のまま。Mu を持ったまま呼ぶこと
+func heldSecret(userID, room string) *Secret {
+	for _, s := range Stamps[userID] {
+		src := StampSource{SpotID: s.SpotID, Staff: s.Staff}
+		if st, ok := secretStaffOf(src); ok && st.Secret == room {
+			return secretFor(userID, src)
+		}
+	}
+	return nil
+}
+
+// GetHeldSecret は、userID が room のカギを持っていれば、その Secret を返す(GET /api/special-room)
+// 特別室に入った記録が端末に残っていないとき(保存できなかった・消えた)に、画面が取り直すのに使う
+func GetHeldSecret(userID, room string) (*Secret, bool) {
+	Mu.Lock()
+	defer Mu.Unlock()
+
+	secret := heldSecret(userID, room)
+	return secret, secret != nil
+}
+
 // StaffStampCount はスタッフごとのスタンプ数
 type StaffStampCount struct {
 	SpotID     int    `json:"spot_id"`

@@ -321,6 +321,11 @@
 .rd-zk-card.is-special::after { clip-path: var(--cut-box); }
 .rd-zk-art.is-special { position: relative; }
 .rd-zk-rare { align-self: center; padding: 1px 10px 2px; background: var(--holo); font-size: 12px; font-weight: 900; color: var(--ink); clip-path: var(--cut-tag); }
+/* 「特別室に入る」（ビンゴ画面・図鑑の詳細）：マスと同じホログラムの紙のボタン。キラキラのマスも押すと入れる */
+.rd-btn.rd-sp-go { --pc: var(--holo); font-family: var(--display); font-weight: 400; font-size: 19px; }
+.rd-btn.rd-sp-go::before { background-size: 300% 300%; animation: rd-sp-holo 6s ease-in-out infinite alternate; }
+.rd-cell-go { position: absolute; inset: 0; z-index: 2; padding: 0; border: 0; background: none; cursor: pointer; }
+.rd-cell-go:focus-visible { outline: 3px solid var(--gold); outline-offset: -3px; }
 @keyframes rd-sp-holo { to { background-position: 100% 100%; } }
 @keyframes rd-sp-shine { 0%, 50% { background-position: 150% 0; } 85%, 100% { background-position: -50% 0; } }
 /* 重ねる星。まん中が白く、ふちが金色の4つ角の星。明るい紙の上でも見えるように、オレンジの光でふちどる */
@@ -346,7 +351,7 @@
   .rd-sp-steam, .rd-sp-cursor, .rd-sp-moonlit, .rd-sp-hot.is-new .rd-sp-tag, .rd-sp-hist li.is-now::before { animation: none; }
   .rd-sp-card-in { transition: none; }
   /* キラキラは止めて、星は光ったままにする */
-  .rd-cell.is-special, .rd-zk-card.is-on.is-special::before, .rd-cell.is-special::after, .rd-zk-card.is-special::after { animation: none; }
+  .rd-cell.is-special, .rd-zk-card.is-on.is-special::before, .rd-cell.is-special::after, .rd-zk-card.is-special::after, .rd-btn.rd-sp-go::before { animation: none; }
   .rd-cell.is-special::after, .rd-zk-card.is-special::after { content: none; }
   .rd-sp-glitter i { animation: none; opacity: 1; transform: rotate(45deg); }
   .rd-sp-sky i { animation: none; opacity: .7; }
