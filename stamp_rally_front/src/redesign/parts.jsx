@@ -11,6 +11,8 @@ const ICONS = {
   zukan: <><path d="M2 4h6a4 4 0 014 4v13a3 3 0 00-3-3H2z" /><path d="M22 4h-6a4 4 0 00-4 4v13a3 3 0 013-3h7z" /></>,
   prize: <><path d="M20 12V22H4V12" /><path d="M22 7H2v5h20V7z" /><path d="M12 22V7" /></>,
   manual: <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>,
+  // 特別室：上が丸い扉（入り口の扉と同じ形）
+  special: <><path d="M5 21V10a7 7 0 0114 0v11" /><line x1="3" y1="21" x2="21" y2="21" /><line x1="14.5" y1="14" x2="14.51" y2="14" /></>,
 };
 
 export function Icon({ name }) {

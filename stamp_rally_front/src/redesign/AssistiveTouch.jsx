@@ -13,13 +13,16 @@ const ITEMS = [
   { key: 'prize', label: '景品' },
   { key: 'manual', label: '説明' },
 ];
+// 特別室に入ったことがある人（special）だけ、最後に足す
+const SPECIAL_ITEM = { key: 'special', label: '特別室' };
 // 角ごとの開く向き（度）。0 が右、90 が下。最初のボタンの向きから、dir の向きへ90度の中に等間隔で並べる。どの角でも画面の内側へ開く
 const ARCS = { bl: { from: 270, dir: 1 }, br: { from: 270, dir: -1 }, tl: { from: 90, dir: -1 }, tr: { from: 90, dir: 1 } };
-const STEP = 90 / (ITEMS.length - 1);
-const angleOf = (corner, i) => ARCS[corner].from + ARCS[corner].dir * STEP * i;
-// 直径62pxのボタンを STEP 度おきに並べても、影まで重ならない半径（中心どうしの間隔 2 × 半径 × sin(STEP/2) が 72px 以上）
-// 4画面（30度おき）なら 140px、5画面（22.5度おき）なら 185px
-const RADIUS = Math.ceil(36 / Math.sin((STEP / 2) * (Math.PI / 180)));
+// ボタンの間の角度（n はボタンの数）
+const stepOf = (n) => 90 / (n - 1);
+const angleOf = (corner, i, n) => ARCS[corner].from + ARCS[corner].dir * stepOf(n) * i;
+// 直径62pxのボタンを stepOf(n) 度おきに並べても、影まで重ならない半径（中心どうしの間隔 2 × 半径 × sin(step/2) が 72px 以上）
+// 4画面（30度おき）なら 140px、5画面（22.5度おき）なら 185px、6画面（18度おき）なら 231px（390px 幅の四隅でも枠からはみ出さない）
+const radiusOf = (n) => Math.ceil(36 / Math.sin((stepOf(n) / 2) * (Math.PI / 180)));
 const HOLD_MS = 350;
 const CORNER_KEY = 'rd.atCorner';
 const TIP_KEY = 'rd.atTipSeen';
@@ -32,7 +35,10 @@ function writeLS(key, v) { try { localStorage.setItem(key, v); } catch { /* 保�
 const SECRET_TAPS = 10;
 const SECRET_GAP_MS = 700;
 
-export default function AssistiveTouch({ page, onGo, hideTip, onSecret }) {
+// special: 特別室に入ったことがあるか（あればメニューに「特別室」を出す）
+export default function AssistiveTouch({ page, onGo, hideTip, onSecret, special = false }) {
+  const items = special ? [...ITEMS, SPECIAL_ITEM] : ITEMS;
+  const radius = radiusOf(items.length);
   const taps = useRef({ n: 0, at: 0 });
   const [corner, setCorner] = useState(() => (['tl', 'tr', 'bl', 'br'].includes(readLS(CORNER_KEY)) ? readLS(CORNER_KEY) : 'bl'));
   const [open, setOpen] = useState(false);
@@ -128,8 +134,8 @@ export default function AssistiveTouch({ page, onGo, hideTip, onSecret }) {
       <div ref={wrap} className={`rd-at rd-at--${corner}${drag ? ' is-drag' : ''}`} style={drag ? { transform: `translate(${drag.x}px, ${drag.y}px)` } : undefined}>
         {tip && !hideTip && !open && !drag && <p className="rd-at-tip">かぼちゃを押すと画面を移動できます</p>}
         <nav id="rd-at-menu" aria-label="画面メニュー" hidden={!open}>
-          {ITEMS.map((it, i) => {
-            const a = (angleOf(corner, i) * Math.PI) / 180;
+          {items.map((it, i) => {
+            const a = (angleOf(corner, i, items.length) * Math.PI) / 180;
             const here = it.key === page;
             return (
               <button
@@ -138,7 +144,7 @@ export default function AssistiveTouch({ page, onGo, hideTip, onSecret }) {
                 type="button"
                 className="rd-at-item"
                 // --fx, --fy: かぼちゃの口からの距離。ここから飛び出してくるように見せる
-                style={{ left: 28 + Math.cos(a) * RADIUS - 31, top: 28 + Math.sin(a) * RADIUS - 31, '--fx': -Math.cos(a) * RADIUS + 'px', '--fy': -Math.sin(a) * RADIUS + 'px', '--i': i }}
+                style={{ left: 28 + Math.cos(a) * radius - 31, top: 28 + Math.sin(a) * radius - 31, '--fx': -Math.cos(a) * radius + 'px', '--fy': -Math.sin(a) * radius + 'px', '--i': i }}
                 aria-current={here ? 'page' : undefined}
                 onClick={() => { close(false); if (!here) onGo(it.key); }}
               >

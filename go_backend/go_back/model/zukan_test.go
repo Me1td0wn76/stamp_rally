@@ -97,7 +97,7 @@ func TestZukanJSONHidesNotAcquired(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(b)
-	for _, key := range []string{"name", "floor", "place", "intro", "stamp_image", "stamped_at"} {
+	for _, key := range []string{"name", "floor", "place", "intro", "stamp_image", "special", "stamped_at"} {
 		if strings.Contains(got, `"`+key+`"`) {
 			t.Errorf("not acquired entry has %q: %s", key, got)
 		}

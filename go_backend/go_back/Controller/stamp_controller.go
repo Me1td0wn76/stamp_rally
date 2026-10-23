@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go_back/go_backend/go_back/model"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -57,8 +58,8 @@ func PostStamp(c *gin.Context) {
 
 	// ビジネスロジック（スタンプ取得処理）はmodelに任せる
 	// コントローラーはリクエストとレスポンスの変換だけを担当するのがGoの一般的な設計
-	// (スポットIDだけでは誰が押したかわからないので、スタッフは空になる)
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), model.StampSource{SpotID: req.SpotID})
+	// (スポットIDだけでは誰が押したかわからないので、スタッフは空になる。隠し画面も開かない)
+	stamp, _, status, errMsg := model.AcquireStamp(userIDFrom(c), model.StampSource{SpotID: req.SpotID})
 
 	// errMsg が空でなければ何らかのエラーが起きている（スポット不正・二重取得など）
 	if errMsg != "" {
@@ -67,6 +68,14 @@ func PostStamp(c *gin.Context) {
 	}
 	// 201 Created：新しいリソース（スタンプ）が作成されたことを示すステータスコード
 	c.JSON(http.StatusCreated, stamp)
+}
+
+// StampResponse は QR・NFC でスタンプを取ったときの 201 の応答
+// Stamp の JSON はそのまま(埋め込みなので spot_id などは同じ階層に出る。staff は今までどおり返さない)で、
+// 隠し画面を開くスタッフ(staff.go の Secret)のスタンプのときだけ secret を足す
+type StampResponse struct {
+	model.Stamp
+	Secret *model.Secret `json:"secret,omitempty"`
 }
 
 // PostStampByNfcはNFCタグのUIDを使ってスタンプを取得するハンドラー
@@ -88,12 +97,12 @@ func PostStampByNfc(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
+	stamp, secret, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
 	}
-	c.JSON(http.StatusCreated, stamp)
+	c.JSON(http.StatusCreated, StampResponse{Stamp: *stamp, Secret: secret})
 }
 
 // PostStampByQr はQRコードの読み取りトークンを使ってスタンプを取得するハンドラー
@@ -115,12 +124,12 @@ func PostStampByQr(c *gin.Context) {
 	}
 
 	// スタンプ取得処理
-	stamp, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
+	stamp, secret, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
 		c.JSON(status, gin.H{"error": errMsg})
 		return
 	}
-	c.JSON(http.StatusCreated, stamp)
+	c.JSON(http.StatusCreated, StampResponse{Stamp: *stamp, Secret: secret})
 }
 
 // GetUserStamps は指定ユーザーの取得済みスタンプ一覧を返すハンドラー
@@ -153,4 +162,16 @@ func GetBingo(c *gin.Context) {
 // まだ取っていないスポットの名前・場所・説明は model側(zukan.go)で空にしてある(画面では ？ で出す)
 func GetZukan(c *gin.Context) {
 	c.JSON(http.StatusOK, model.GetZukan(userIDFrom(c)))
+}
+
+// GetSpecialRoomLive は、特別室の「いまの会場」(参加者・スタンプ・特別室に入った人・いま部屋にいる人の数)を返すハンドラー
+// 特別室に入った人(特別室を開くスタッフのスタンプを取った人)だけが見られる。ほかの人は 403
+// 特別室の画面を開いている間、画面が10秒ごとに呼ぶ(呼ばれた時刻で「いま部屋にいる人」を数える。model/secret_room.go)
+func GetSpecialRoomLive(c *gin.Context) {
+	live, ok := model.GetSecretRoomLive(userIDFrom(c), model.SecretSpecialRoom, time.Now())
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not entered"})
+		return
+	}
+	c.JSON(http.StatusOK, live)
 }

@@ -18,16 +18,22 @@ import (
 //     スタッフ名は管理用 API・ログに出るだけなので、あとから変えてもよい。
 //   - StampImage を登録すると、そのスタッフが押したマスにはかぼちゃの代わりにその画像が出る(GET /api/bingo の stamp_image)。
 //     画像は stamp_rally_front/public/stamps/ に置く。ユーザーに返すのはファイル名だけで、スタッフ名は返さない。
+//   - Secret を登録すると、そのスタッフのスタンプを取ったときだけスタンプ取得 API の応答に secret が付き、画面に隠し画面が出る(secretFor)。
+//     スタッフ名を返すのはこの secret の中だけ。
 type staffToken struct {
 	SpotID     int    // スタンプを押すスポット
 	Staff      string // スタッフの名前(スポットの中で重複不可)
 	QrToken    string // このスタッフの QRコード・NFCタグの URL(?spot=<トークン>)に入れるトークン
 	NfcUID     string // このスタッフの NFC タグの UID(アプリの NFC 読み込み画面用。未登録なら空)
 	StampImage string // このスタッフが押したマスに出す画像(public/stamps/ のファイル名。空ならほかのマスと同じかぼちゃ)
+	Secret     string // このスタッフのスタンプを取ったときに開く隠し画面(SecretSpecialRoom)。空なら何もない
 }
 
+// SecretSpecialRoom は特別室(隠し画面)の名前。staffToken.Secret と、スタンプ取得 API の secret.room に入る
+const SecretSpecialRoom = "special-room"
+
 var staffTokens = []staffToken{
-	{SpotID: 1, Staff: "Me1td0wn76", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw", StampImage: "Me1td0wn76_stamp.png"},
+	{SpotID: 1, Staff: "Me1td0wn76", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw", StampImage: "Me1td0wn76_stamp.png", Secret: SecretSpecialRoom},
 	{SpotID: 1, Staff: "Tongari-Boy", QrToken: "fUAtG4HeJkFkUyz7LUJqdw", StampImage: "UCI_stamp.png"},
 	{SpotID: 1, Staff: "スタッフ3", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff3.svg"},
 }
@@ -48,6 +54,61 @@ func stampImageOf(src StampSource) string {
 		return spot.StampImage
 	}
 	return ""
+}
+
+// Secret は、隠し画面を開くスタッフ(staffToken.Secret のあるスタッフ)のスタンプを取ったときだけ、
+// スタンプ取得 API(QR・NFC)の 201 の応答に足す中身
+type Secret struct {
+	Room       string `json:"room"`        // 開く隠し画面("special-room")
+	No         int    `json:"no"`          // 入室番号(その隠し画面を開くスタンプを初めて取った順の通し番号)
+	Staff      string `json:"staff"`       // 押したスタッフ
+	StampImage string `json:"stamp_image"` // そのスタッフのスタンプ画像(public/stamps/ のファイル名)
+	Stamps     int    `json:"stamps"`      // 取ったあとの、そのユーザーのスタンプの数
+}
+
+// secretRoomNos は隠し画面ごとの入室番号(隠し画面 → ユーザーID → 番号)。Mu で保護する
+// スタンプと同じくメモリに置くだけなので、サーバーを再起動すると数え直しになる
+var secretRoomNos = make(map[string]map[string]int)
+
+// secretStaffOf は、src が隠し画面を開くスタッフ(Secret のあるスタッフ)のスタンプなら、そのスタッフを返す
+func secretStaffOf(src StampSource) (staffToken, bool) {
+	if src.Staff == "" {
+		return staffToken{}, false
+	}
+	for _, st := range staffTokens {
+		if st.SpotID == src.SpotID && st.Staff == src.Staff && st.Secret != "" {
+			return st, true
+		}
+	}
+	return staffToken{}, false
+}
+
+// isSpecialStamp は、隠し画面を開くスタッフのスタンプかを返す
+// ビンゴのマス・図鑑の special に入れる(画面ではキラキラを付ける。スタッフ名は返さない)
+func isSpecialStamp(src StampSource) bool {
+	_, ok := secretStaffOf(src)
+	return ok
+}
+
+// secretFor は、src が隠し画面を開くスタッフのスタンプなら、応答に足す Secret を返す(それ以外は nil)
+// 入室番号は、その隠し画面を開くスタンプを初めて取ったときに振り、同じユーザーにはいつも同じ番号を返す
+// スタンプの記録と同じロックの中で数えるため、Mu を持ったまま呼ぶこと
+func secretFor(userID string, src StampSource) *Secret {
+	st, ok := secretStaffOf(src)
+	if !ok {
+		return nil
+	}
+	nos := secretRoomNos[st.Secret]
+	if nos == nil {
+		nos = make(map[string]int)
+		secretRoomNos[st.Secret] = nos
+	}
+	no, entered := nos[userID]
+	if !entered {
+		no = len(nos) + 1
+		nos[userID] = no
+	}
+	return &Secret{Room: st.Secret, No: no, Staff: st.Staff, StampImage: st.StampImage, Stamps: len(Stamps[userID])}
 }
 
 // StaffStampCount はスタッフごとのスタンプ数

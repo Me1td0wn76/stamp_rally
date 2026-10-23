@@ -4,6 +4,7 @@ import { NETWORK_ERROR, errorMessage } from './errors';
 // kind: 'qr'(body: { qr_token }) / 'nfc'(body: { nfc_uid }。タグの UID で取る方式。今の画面では使わない)
 // NFCタグ・QRコードの URL から開いたときも、読み込み画面(redesign/Scan.jsx)で読んだときも 'qr' で URL のトークンを送る
 // 結果は { status, message } で返す。201(取得)・401(未スタート)のときの処理は呼び出し側で行う
+// 201 のときは secret も返す（特別室を開くスタッフのスタンプのときだけ { room, no, staff, stamp_image, stamps }。それ以外は null）
 export async function postStamp(kind, body) {
   let res;
   try {
@@ -19,7 +20,7 @@ export async function postStamp(kind, body) {
   const data = await res.json().catch(() => ({}));
   switch (res.status) {
     case 201:
-      return { status: 201, message: 'スタンプを取得しました！' };
+      return { status: 201, message: 'スタンプを取得しました！', secret: data.secret ?? null };
     case 401:
       return { status: 401, message: '' };
     case 404:

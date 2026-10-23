@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import './redesign.css';
+// 特別室の見た目は redesign.css の変数を使うので、そのあとに読み込む
+import './special.css';
 import AssistiveTouch from './AssistiveTouch.jsx';
 import Guide from './Guide.jsx';
 import Bingo from './Bingo.jsx';
@@ -10,8 +12,12 @@ import Manual from './Manual.jsx';
 import Credits from './Credits.jsx';
 import Haunt from './Haunt.jsx';
 import Loader from './Loader.jsx';
+import { SpecialSky } from './Sparkle.jsx';
 // 隠しミニゲームは見つけたときに初めて読み込む（ふだんの読み込みを増やさないため）
 const WitchGame = lazy(() => import('./WitchGame.jsx'));
+// 特別室（入り口の演出と、部屋）も同じく、見つけたときに初めて読み込む
+const SpecialEntry = lazy(() => import('./SpecialEntry.jsx'));
+const SpecialRoom = lazy(() => import('./SpecialRoom.jsx'));
 import { Frame } from './parts.jsx';
 import { NETWORK_ERROR, errorMessage } from '../api/errors';
 // NFCタグ・QRコードの URL(?spot=<トークン>)から取り出したトークン（取り出し方は spotToken.js）
@@ -26,6 +32,23 @@ import { initialSpotToken } from './spotToken.js';
 const BOOT_MIN_MS = 1000;
 const BOOT_MAX_MS = 4000;
 const BOOT_FADE_MS = 350;
+
+// 特別室に入った記録（スタンプ取得 API の secret をそのまま保存する）。一度入った人は、かぼちゃのメニューからいつでも入れる
+const SPECIAL_KEY = 'rd.special';
+// 入り口の演出で git clone に出すコミット数（specialData.js の STATS のコミットと同じ数。数え直したらそろえる）
+const SPECIAL_COMMITS = 152;
+
+function readSpecial() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SPECIAL_KEY));
+    return s && typeof s === 'object' ? s : null;
+  } catch {
+    return null;
+  }
+}
+function writeSpecial(s) {
+  try { localStorage.setItem(SPECIAL_KEY, JSON.stringify(s)); } catch { /* 保存できなくても、今回は入れる */ }
+}
 
 function RedesignApp() {
   // 起動時はビンゴ画面（今の App.jsx と同じ）
@@ -79,6 +102,21 @@ function RedesignApp() {
   const leaveSecret = () => {
     setSecretOpen(false);
     navigate('bingo');
+  };
+
+  // 特別室（特別室を開くスタッフのスタンプを取ると、ビンゴ画面・読み込み画面が onSecret で知らせてくる）
+  // special: 入った記録（入室番号など。メニューに「特別室」を出すかもこれで決める） / specialEntry: いま出している入り口の演出
+  // 魔女のほうき（secretOpen）とは別のもの
+  const [special, setSpecial] = useState(readSpecial);
+  const [specialEntry, setSpecialEntry] = useState(null);
+  const openSpecial = useCallback((s) => {
+    writeSpecial(s);
+    setSpecial(s);
+    setSpecialEntry(s);
+  }, []);
+  const enterSpecial = () => {
+    setSpecialEntry(null);
+    navigate('special');
   };
 
   // 最初に開いたときの遊び方は「閉じる」なし（最後の「はじめる」でIDを発行して始める）
@@ -144,13 +182,32 @@ function RedesignApp() {
     <Frame
       scrollKey={currentScreen}
       // 説明画面では黒猫をつかんで上に引っぱると、開発者紹介（隠し画面）へ
-      before={<Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />}
+      // 特別室に入ったことがある人は、夜空に虹色の星も出る
+      before={(
+        <>
+          <Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />
+          {special && <SpecialSky />}
+        </>
+      )}
       after={(
         <>
-          <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} />
+          <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} special={special !== null} />
           {secretOpen && (
             <Suspense fallback={<div className="rd-wg rd-wg--loading"><Loader size="full" /></div>}>
               <WitchGame onBack={leaveSecret} />
+            </Suspense>
+          )}
+          {/* 特別室の入り口。URL から開いたときはロード画面の裏で始まらないよう、遊び方と同じくロード画面が消え始めてから出す */}
+          {specialEntry && boot !== 'booting' && (
+            <Suspense fallback={<div className="rd-wg rd-wg--loading"><Loader size="full" /></div>}>
+              <SpecialEntry
+                no={specialEntry.no}
+                stamps={specialEntry.stamps}
+                staff={specialEntry.staff}
+                stampImage={specialEntry.stamp_image}
+                commits={SPECIAL_COMMITS}
+                onEnter={enterSpecial}
+              />
             </Suspense>
           )}
           {/* 遊び方はロード画面が消え始めてから出す（カードが出てくる動きを見せるため） */}
@@ -169,15 +226,21 @@ function RedesignApp() {
           onChecked={handleStartedChecked}
           navigate={navigate}
           openGuide={openGuide}
+          onSecret={openSpecial}
           pendingSpotToken={pendingSpotToken}
           clearPendingSpotToken={() => setPendingSpotToken(null)}
         />
       )}
-      {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} />}
+      {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} onSecret={openSpecial} />}
       {currentScreen === 'zukan' && <Zukan navigate={navigate} openGuide={openGuide} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
       {currentScreen === 'credits' && <Credits navigate={navigate} />}
+      {currentScreen === 'special' && special && (
+        <Suspense fallback={<Loader />}>
+          <SpecialRoom no={special.no} stampImage={special.stamp_image} onExit={() => navigate('bingo')} />
+        </Suspense>
+      )}
     </Frame>
   );
 }

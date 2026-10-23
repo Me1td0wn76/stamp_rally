@@ -4,6 +4,7 @@ import { NETWORK_ERROR, errorMessage } from '../api/errors';
 import { Icon, Pumpkin, Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import LoadError from './LoadError.jsx';
+import { Glitter } from './Sparkle.jsx';
 
 // ビンゴ。データの取り方・数え方・スタート・URL からのスタンプ取得は今の画面（components/Bingo.jsx）と同じ。
 // QR コード・NFC タグの読み取りは Scan.jsx に分けたので、ここでは読み込み画面へのボタンだけ置く
@@ -19,11 +20,12 @@ const TYPE_LABEL = {
 // スタンプ済みのマスの印
 // CodeFlow のスタンプは押したスタッフごとに画像が変わる（/api/bingo の stamp_image。画像は public/stamps/ に置き、ファイル名は staff.go に登録する）
 // 画像がないマスと、画像を読み込めなかったときはかぼちゃを出す
-function StampMark({ image }) {
+// special（特別室のカギになるスタンプ）は、読み上げでもそうと分かるようにする（キラキラはマスの方に付ける）
+function StampMark({ image, special }) {
   const [broken, setBroken] = useState(false);
   const showImage = image && !broken;
   return (
-    <span className={`rd-cell-mark${showImage ? ' rd-cell-mark--img' : ''}`} role="img" aria-label="スタンプ済み">
+    <span className={`rd-cell-mark${showImage ? ' rd-cell-mark--img' : ''}`} role="img" aria-label={special ? 'スタンプ済み（特別なスタンプ）' : 'スタンプ済み'}>
       {showImage
         ? <img className="rd-cell-img" src={`/stamps/${image}`} alt="" onError={() => setBroken(true)} />
         : <Pumpkin />}
@@ -33,7 +35,8 @@ function StampMark({ image }) {
 
 // onChecked: ビンゴ状況を取るたびに、スタート済みかを親に知らせる（true / false: 未スタート(401) / null: 取得に失敗）。
 // 親は最初の結果で、遊び方を出すか（未スタートなら出す）を決める
-const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
+// onSecret: 特別室を開くスタッフのスタンプを取ったときに、応答の secret を渡して呼ぶ（親が入り口の演出を出す）
+const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
   // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
@@ -86,15 +89,16 @@ const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingS
 
   // スタンプ取得（URL から開いたとき用）。レスポンスのステータスを返す
   const acquireStamp = useCallback(async (kind, body) => {
-    const { status, message } = await postStamp(kind, body);
+    const { status, message, secret } = await postStamp(kind, body);
     if (status === 401) {
       handleUnauthorized();
       return status;
     }
     setMessage(message);
     if (status === 201) fetchBingo();
+    if (status === 201 && secret) onSecret?.(secret);
     return status;
-  }, [fetchBingo, handleUnauthorized]);
+  }, [fetchBingo, handleUnauthorized, onSecret]);
 
   // NFCタグ・QRコードの URL から開いたとき:スタート済みならトークンを送ってスタンプを取得する
   // 未スタート(401)ならトークンは残しておき、スタートして started が true になったら送り直す
@@ -186,10 +190,12 @@ const Bingo = ({ navigate, openGuide, onChecked, pendingSpotToken, clearPendingS
         {cells.map((cell) => (
           <li
             key={cell.index}
-            className={`rd-cell${cell.filled ? ' is-on' : ''}${completedLineSet.has(cell.index) ? ' is-line' : ''}`}
+            className={`rd-cell${cell.filled ? ' is-on' : ''}${cell.special ? ' is-special' : ''}${completedLineSet.has(cell.index) ? ' is-line' : ''}`}
           >
             <span className="rd-cell-name">{TYPE_LABEL[cell.type] ?? ''}</span>
-            {cell.filled ? <StampMark image={cell.stamp_image} /> : <span className="rd-cell-state">まだ</span>}
+            {cell.filled ? <StampMark image={cell.stamp_image} special={cell.special} /> : <span className="rd-cell-state">まだ</span>}
+            {/* 特別室のカギになるスタンプのマスは、ホログラムの紙にして星を光らせる */}
+            {cell.special && <Glitter />}
           </li>
         ))}
       </ul>

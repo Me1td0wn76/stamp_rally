@@ -187,12 +187,21 @@ func UserExists(userID string) bool {
 	return exists
 }
 
+// userCount は発行済みのユーザーIDの数を返す(特別室の「いまの会場」に出す)
+func userCount() int {
+	usersMu.RLock()
+	defer usersMu.RUnlock()
+
+	return len(Users)
+}
+
 // Business logic
 // src.Staff(スタッフ別トークンで取ったときだけ入る)はスタンプに記録する
-func AcquireStamp(userID string, src StampSource) (*Stamp, int, string) {
+// 隠し画面を開くスタッフ(staff.go の Secret)のスタンプなら、応答に足す Secret も返す(それ以外は nil)
+func AcquireStamp(userID string, src StampSource) (*Stamp, *Secret, int, string) {
 	spot, ok := GetSpotByID(src.SpotID)
 	if !ok {
-		return nil, http.StatusBadRequest, "spot not found"
+		return nil, nil, http.StatusBadRequest, "spot not found"
 	}
 
 	Mu.Lock()
@@ -200,13 +209,13 @@ func AcquireStamp(userID string, src StampSource) (*Stamp, int, string) {
 
 	for _, s := range Stamps[userID] {
 		if s.SpotID == src.SpotID {
-			return nil, http.StatusConflict, "stamp already acquired"
+			return nil, nil, http.StatusConflict, "stamp already acquired"
 		}
 	}
 
 	cellIndex, err := pickBingoCell(userID, spot.Type)
 	if err != nil {
-		return nil, http.StatusInternalServerError, "failed to pick bingo cell"
+		return nil, nil, http.StatusInternalServerError, "failed to pick bingo cell"
 	}
 
 	stamp := Stamp{
@@ -223,7 +232,8 @@ func AcquireStamp(userID string, src StampSource) (*Stamp, int, string) {
 	if src.Staff != "" {
 		log.Printf("staff stamp: spot=%d(%s) staff=%q", spot.ID, spot.Name, src.Staff)
 	}
-	return &stamp, http.StatusCreated, ""
+	// 入室番号はスタンプの記録と同じロックの中で数える(取った順と番号の順がずれないように)
+	return &stamp, secretFor(userID, src), http.StatusCreated, ""
 }
 
 // ----------------------------------------------------------------
