@@ -1,16 +1,4 @@
-/* =================================================================
-   特別室（SpecialEntry.jsx・SpecialRoom.jsx）。redesign.css のあとに読み込む。
-   色・紙の切り方・影は redesign.css の .rd の変数（--night・--paper・--orange・--cut-box など）をそのまま使う。
-   クラス名はすべて rd-sp- で始める。
-   ================================================================= */
-
 .rd { --mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; --term: #120A16; --term-line: #2A1C30; }
-
-/* -----------------------------------------------------------------
-   入室の演出（SpecialEntry.jsx）。ターミナル → 画面がとける → 扉と入室証
-   時間は JS が計算して、各行の --d（出る時刻）・--dur（打つ長さ）、全体の --melt・--door に入れる。
-   --freeze を足すと、その時刻まで進めた状態から始まる（「とばす」は最後まで進める。見本は .is-still で止める）
-   ----------------------------------------------------------------- */
 .rd-sp-entry { --freeze: 0ms; position: absolute; inset: 0; z-index: 260; overflow: hidden; background: var(--term); color: var(--paper); }
 .rd-sp-entry.is-still, .rd-sp-entry.is-still * { animation-play-state: paused !important; }
 
@@ -35,10 +23,8 @@
 .rd-sp-ln--ok { padding-left: 2ch; color: var(--gold); }
 .rd-sp-ln--pw { padding-left: 2ch; color: var(--kraft2); }
 .rd-sp-ln--bar { padding-left: 2ch; display: flex; align-items: center; gap: 10px; color: var(--kraft2); }
-/* 1文字ずつ打つ（等幅なので 1ch ずつ広げる） */
 .rd-sp-type { display: inline-block; vertical-align: bottom; max-width: 100%; overflow: hidden; white-space: nowrap; width: calc(var(--n) * 1ch);
   animation: rd-sp-type var(--dur) steps(var(--n)) calc(var(--d) - var(--freeze)) both; }
-/* 打っている間だけ出るカーソル */
 .rd-sp-ln--cmd::after, .rd-sp-ln--pw::after { content: ""; display: inline-block; width: .6em; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--paper);
   animation: rd-sp-caret calc(var(--dur) + 180ms) steps(1, end) calc(var(--d) - var(--freeze)) both; }
 .rd-sp-meter { flex: none; display: grid; grid-template-columns: repeat(10, 7px); gap: 2px; padding: 2px; box-shadow: inset 0 0 0 1px var(--kraft); }
@@ -50,14 +36,10 @@
 @keyframes rd-sp-grow { from { transform: scaleX(0); } }
 @keyframes rd-sp-shake { 0%, 100% { transform: translate(0); } 20% { transform: translate(-3px, 1px); } 40% { transform: translate(3px, -1px); } 60% { transform: translate(-2px, 2px); } 80% { transform: translate(2px, -1px); } }
 @keyframes rd-sp-sink { to { transform: translateY(26%) scaleY(1.25); filter: blur(2px); opacity: 0; } }
-
-/* 画面がとける：上からかぼちゃ色が流れ落ちて画面をおおい、下へ抜けていく */
 .rd-sp-melt { position: absolute; left: -2%; right: -2%; top: 0; z-index: 2; height: 140%; pointer-events: none;
   animation: rd-sp-pour var(--melt-len, 1500ms) cubic-bezier(.45, 0, .55, 1) calc(var(--melt) - var(--freeze)) both; }
 .rd-sp-melt svg { display: block; width: 100%; height: 100%; }
 @keyframes rd-sp-pour { 0% { transform: translateY(-101%); } 46%, 58% { transform: translateY(0); } 100% { transform: translateY(72%); } }
-
-/* 扉と入室証 */
 .rd-sp-door { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
   padding: calc(24px + env(safe-area-inset-top, 0px)) 22px calc(28px + env(safe-area-inset-bottom, 0px)); background: var(--night); color: var(--paper); text-align: center;
   animation: rd-sp-show 1ms linear calc(var(--melt) + 700ms - var(--freeze)) both; }
@@ -80,12 +62,6 @@
 .rd-sp-skip { position: absolute; z-index: 3; right: 14px; top: calc(10px + env(safe-area-inset-top, 0px)); min-height: 36px; padding: 4px 14px; font-size: 13px;
   animation: rd-sp-hide 1ms linear calc(var(--melt) - var(--freeze)) both; }
 @keyframes rd-sp-hide { to { opacity: 0; visibility: hidden; } }
-
-/* -----------------------------------------------------------------
-   入室証（SpecialTicket.jsx）。西洋の古い劇場のチケット（ADMIT ONE）
-   左が本体、右が半券。四すみとミシン目の上下は mask で丸くえぐる（2枚の紙を並べ、それぞれの四すみをえぐる）。
-   大きさは --tk-s（1 で幅 315px）。中の寸法はすべて em（1em = 10px × --tk-s）
-   ----------------------------------------------------------------- */
 .rd-sp-tk {
   --tk-r: .95em; --tk-paper: var(--paper2); --tk-ink: var(--ink); --tk-red: #B23A1E; --tk-rule: var(--orange2); --tk-perf: var(--kraft);
   --tk-notch:
@@ -134,11 +110,6 @@
   --tk-paper-solid: #F4C451; --tk-ink: #3B2340; --tk-red: #7A2E10; --tk-rule: #7A4A10; --tk-perf: #9C6A1A;
 }
 .rd-sp-tk.is-gold .rd-sp-tk-main::after { content: ""; position: absolute; inset: 0; background: var(--shine) no-repeat; background-size: 250% 100%; animation: rd-sp-shine 3.2s ease-in-out infinite; pointer-events: none; }
-
-/* -----------------------------------------------------------------
-   特別室（SpecialRoom.jsx）
-   ----------------------------------------------------------------- */
-/* 画面の中身（.rd-scroll の縦並び）が縮んで中が切れないように */
 .rd-sp-scene, .rd-sp-menu, .rd-sp-cards, .rd-sp-stats, .rd-sp-owl, .rd-sp-hist, .rd-sp-gal, .rd-sp-tty, .rd-sp-chips, .rd-sp-photo, .rd-sp-tty > * { flex-shrink: 0; }
 
 /* 部屋の絵：置いてあるものを押すと中身が開く */

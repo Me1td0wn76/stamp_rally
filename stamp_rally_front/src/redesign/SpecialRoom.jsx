@@ -5,17 +5,7 @@ import SpecialTicket, { PUMPKIN } from './SpecialTicket.jsx';
 import SpecialSafe from './SpecialSafe.jsx';
 import { MEMBERS, STATS, NIGHT_OWL, HISTORY, GALLERY, ROOM_ITEMS, FORTUNES, HELP, GIT_LOG, TREATS, SECRET_NOTE, CAT_LINES } from './specialData.js';
 
-// 特別室（隠し画面）。入り口（SpecialEntry.jsx）で入室証をもらった人だけが入れる。
-// 部屋の絵に置いてあるものを押すと、それぞれの中身が開く：メンバー（トレカ）・メイキング・ターミナル・記念写真
-// 「準備中」のもの（いまの会場・しくみ・金庫）は、あとから中身を足す
-//
-// no: 入室番号 / cells・lines: ビンゴのマスとそろった列（記念写真に使う。渡さなければ GET /api/bingo から取る）
-// stampImage: 入るときに押されたスタッフの印 / onExit: ビンゴに戻る
-// view・flipped・avatars・history: 見本用（はじめに開く中身、裏返しておくカード、GitHub のアイコンを出すか、ターミナルの履歴）
-
 const pad4 = (n) => String(n).padStart(4, '0');
-
-// ---------------------------------------------------------------- 部屋の絵
 function RoomArt() {
   return (
     <svg className="rd-sp-scene-art" viewBox="0 0 340 290" aria-hidden="true">
@@ -93,17 +83,13 @@ function RoomArt() {
   );
 }
 
-// 絵の上の押せる場所（viewBox の座標）
+
 const HOT = {
   members: [124, 12, 86, 104], making: [14, 118, 88, 106], term: [146, 106, 100, 76], photo: [248, 148, 60, 34],
   live: [14, 14, 94, 94], how: [218, 20, 112, 80], safe: [256, 192, 64, 46],
 };
-
-// 本棚の上の黒猫（viewBox の座標）。押すとしゃべる（窓と少し重なるので、押せる場所のいちばん上に置く）
 const CAT = [58, 90, 40, 31];
 const MEOW_MS = 2800;
-
-// here: いまこの部屋にいる人の数（「いまの会場」の here。まだ分からなければ出さない）
 function Room({ no, open, here }) {
   // 黒猫のせりふ（at を変えて、同じせりふでも出し直す）
   const [meow, setMeow] = useState(null);
@@ -121,7 +107,7 @@ function Room({ no, open, here }) {
   return (
     <>
       <Title name="特別室" sub={`No.${pad4(no)}`} />
-      <p className="rd-msg">CodeFlow の教室の、さらに奥。気になるものを押してみてください。</p>
+      <p className="rd-msg">僕のスタンプを押してくれてありがとう！</p>
       {here > 0 && <p className="rd-sp-here"><i aria-hidden="true" />いま {here}人 がこの部屋にいます{here === 1 ? '（あなただけ）' : ''}</p>}
       <div className="rd-sp-scene">
         <RoomArt />
@@ -154,7 +140,6 @@ function Room({ no, open, here }) {
   );
 }
 
-// ---------------------------------------------------------------- メンバー（トレカ）
 function Avatar({ name, show }) {
   const [broken, setBroken] = useState(false);
   return (
@@ -205,8 +190,6 @@ function Members({ back, flipped: first, avatars }) {
     </>
   );
 }
-
-// ---------------------------------------------------------------- メイキング
 function Making({ back }) {
   return (
     <>
@@ -238,9 +221,6 @@ function Making({ back }) {
     </>
   );
 }
-
-// ---------------------------------------------------------------- ターミナル（自由に打てる）
-// 全角は2文字ぶんで数える（吹き出しの幅をそろえるため）
 const width = (s) => [...s].reduce((n, c) => n + (c.charCodeAt(0) > 0xff ? 2 : 1), 0);
 function pumpkinsay(text) {
   const t = text || 'トリック・オア・スタンプ！';
@@ -271,8 +251,6 @@ function runCommand(input, ctx) {
     default: return [{ kind: 'err', text: `command not found: ${cmd}（help で一覧）` }];
   }
 }
-
-// trick で出るおばけ
 const GHOST = ['   .-.', '  (o o)', '  | O |', '  |   |', "  '~~~'"].join('\n');
 
 const QUICK = ['help', 'whoami', 'fortune', 'git log', 'pumpkinsay', 'treat'];
@@ -307,16 +285,11 @@ function Term({ back, no, history }) {
     </>
   );
 }
-
-// ---------------------------------------------------------------- 記念写真（入室証を画像にして保存）
 const NIGHT = '#3B2340';
 const CINZEL = "'Cinzel', Georgia, serif";
 const GOTHIC = "'Zen Kaku Gothic New', sans-serif";
 const MONO = "'DM Mono', ui-monospace, monospace";
 const YUSEI = "'Yusei Magic', sans-serif";
-
-// 入室証（SpecialTicket.jsx と同じ形のチケット）を、夜空の上の (x, y) に描く。幅 720・高さ 400
-// 四すみとミシン目の上下は、後ろの夜空の色の丸で塗ってえぐる。半券にはパンチの穴（かぼちゃ）
 function drawTicket(g, { x, y, no, date, stamp, gold }) {
   const W = 720, H = 400, MAIN = 570, R = 24;
   const ink = '#3B2340', red = gold ? '#7A2E10' : '#B23A1E', rule = gold ? '#7A4A10' : '#9C4416', perf = gold ? '#9C6A1A' : '#C9AE84';
@@ -419,8 +392,6 @@ async function savePhoto({ no, cells, lines, stampImage, date, gold }) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-
-// 画面の写真：パンチ済みの入室証（チケット）・小さなビンゴカード・入場済みのゴム印
 function Photo({ back, no, cells, lines, stampImage, date, gold = false }) {
   const [busy, setBusy] = useState(false);
   const on = new Set(cells.filter((x) => x.filled).map((x) => x.index));
@@ -446,9 +417,6 @@ function Photo({ back, no, cells, lines, stampImage, date, gold = false }) {
     </>
   );
 }
-
-// ---------------------------------------------------------------- いまの会場（窓から会場をのぞく）
-// live: GET /api/special-room/live の中身（null: 取っている途中 / { error: ステータス }: 取れなかった）
 const num = (n) => n.toLocaleString('ja-JP');
 function Live({ back, live }) {
   let body;
@@ -489,12 +457,7 @@ function Live({ back, live }) {
     </>
   );
 }
-
-// ---------------------------------------------------------------- 本体
-// 「いまの会場」を取りに行く間隔(ms)。特別室を開いている間はずっと取りに行く（サーバーはこれで「いま部屋にいる人」を数える）
 const LIVE_MS = 10000;
-
-// 金庫をいちばん早く開けた回数（まだ開けていなければ 0）。開けた人は金のチケットになる。この端末にだけ保存する
 const SAFE_KEY = 'rd.safeBest';
 function readSafeBest() { try { return Number(localStorage.getItem(SAFE_KEY)) || 0; } catch { return 0; } }
 function writeSafeBest(v) { try { localStorage.setItem(SAFE_KEY, String(v)); } catch { /* 保存できなくても、今回は金のチケットになる */ } }

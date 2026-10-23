@@ -3,27 +3,14 @@ import { Night } from './parts.jsx';
 import SpecialTicket from './SpecialTicket.jsx';
 import { timeline, TIMING } from './specialData.js';
 
-// 特別室への入り口（隠し画面）。特定のスタッフのスタンプを押されたときだけ、スタンプを取った直後に全画面で出す。
-// ターミナルにコマンドが自動で打たれ → 画面がとけて流れ落ち → 扉の前で入室証（チケット）にスタッフの印が押される → 「特別室に入る」
-// 「特別室に入る」を押すと、半券に改札のパンチ（かぼちゃの穴）を入れてから onEnter を呼ぶ
-// 動きはすべて CSS。各行が出る時刻は specialData.js の timeline() で計算して、CSS 変数（--d など）で渡す。
-// 「とばす」は時計を扉の時刻まで進める（中身を作り直して、扉の場面から始める）。動きを減らす設定の端末では、はじめから扉の場面を出す。
-//
-// no: 入室番号 / stamps: 取ったスタンプの数 / staff: 押したスタッフ / stampImage: そのスタッフの印（public/stamps/ のファイル名）
-// onEnter: 「特別室に入る」を押したとき
-// freeze・still: 見本用。freeze(ms) の時刻の場面から始め、still なら動きを止めておく
 
 const pad4 = (n) => String(n).padStart(4, '0');
 const REDUCED = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-// パンチを入れてから部屋へ進むまで(ms)
 const PUNCH_MS = 750;
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 };
-
-// 流れ落ちるかぼちゃ色。下のふちにしずくが垂れる
-// SVG は画面いっぱいに横へ引きのばす（preserveAspectRatio="none"）ので、しずくの丸は縦をつぶして描く（K = 横1に対する縦の長さ）
 const K = 0.46;
 function Drips({ base, drips, fill }) {
   return (
@@ -59,8 +46,6 @@ function Melt() {
     </div>
   );
 }
-
-// 扉（左右の戸が開くと、中の灯りが見える）
 function Gate() {
   return (
     <svg className="rd-sp-gate" viewBox="0 0 150 168" aria-hidden="true">
@@ -115,8 +100,6 @@ export default function SpecialEntry({ no = 1, stamps = 0, staff = '', stampImag
   const [punching, setPunching] = useState(false);
   const enterRef = useRef(null);
   const start = skipped ? tl.door : (freeze ?? 0);
-
-  // パンチを入れ終わったら部屋へ（onEnter は親が描き直すたびに変わるので、最新のものを ref から呼ぶ）
   const onEnterRef = useRef(onEnter);
   useEffect(() => { onEnterRef.current = onEnter; });
   useEffect(() => {
@@ -129,8 +112,6 @@ export default function SpecialEntry({ no = 1, stamps = 0, staff = '', stampImag
     if (REDUCED) onEnter?.();
     else setPunching(true);
   };
-
-  // 扉の場面になったら「特別室に入る」にフォーカスを移す（キーボード・読み上げで続けて押せるように）
   useEffect(() => {
     if (still) return undefined;
     const wait = Math.max(0, tl.door + 1100 - start);
