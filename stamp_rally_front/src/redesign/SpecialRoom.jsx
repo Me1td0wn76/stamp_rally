@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Title } from './parts.jsx';
+import SpecialTicket, { PUMPKIN } from './SpecialTicket.jsx';
 import { MEMBERS, STATS, NIGHT_OWL, HISTORY, GALLERY, ROOM_ITEMS, FORTUNES, HELP, GIT_LOG } from './specialData.js';
 
 // 特別室（隠し画面）。入り口（SpecialEntry.jsx）で入室証をもらった人だけが入れる。
@@ -276,30 +277,110 @@ function Term({ back, no, history }) {
 }
 
 // ---------------------------------------------------------------- 記念写真（入室証を画像にして保存）
-async function savePhoto({ no, cells, lines, stampImage, date }) {
+const NIGHT = '#3B2340';
+const CINZEL = "'Cinzel', Georgia, serif";
+const GOTHIC = "'Zen Kaku Gothic New', sans-serif";
+const MONO = "'DM Mono', ui-monospace, monospace";
+const YUSEI = "'Yusei Magic', sans-serif";
+
+// 入室証（SpecialTicket.jsx と同じ形のチケット）を、夜空の上の (x, y) に描く。幅 720・高さ 400
+// 四すみとミシン目の上下は、後ろの夜空の色の丸で塗ってえぐる。半券にはパンチの穴（かぼちゃ）
+function drawTicket(g, { x, y, no, date, stamp, gold }) {
+  const W = 720, H = 400, MAIN = 570, R = 24;
+  const ink = '#3B2340', red = gold ? '#7A2E10' : '#B23A1E', rule = gold ? '#7A4A10' : '#9C4416', perf = gold ? '#9C6A1A' : '#C9AE84';
+  const center = x + MAIN / 2, stubX = x + MAIN + (W - MAIN) / 2;
+  const text = (s, tx, ty, font, color, align = 'center') => { g.font = font; g.fillStyle = color; g.textAlign = align; g.fillText(s, tx, ty); };
+  g.save();
+  g.translate(x + W / 2, y + H / 2); g.rotate(-.03); g.translate(-(x + W / 2), -(y + H / 2));
+  // 紙
+  if (gold) {
+    const grad = g.createLinearGradient(x, y, x + W, y + H);
+    [[0, '#D9A02B'], [.28, '#FBE08A'], [.46, '#E8B83A'], [.6, '#FFF2B8'], [.8, '#D19424'], [1, '#F4C451']].forEach(([o, c]) => grad.addColorStop(o, c));
+    g.fillStyle = grad;
+  } else {
+    g.fillStyle = '#FFF6E2';
+  }
+  g.fillRect(x, y, W, H);
+  // 四すみとミシン目の上下をえぐる
+  g.fillStyle = NIGHT;
+  for (const [cx, cy] of [[x, y], [x + W, y], [x, y + H], [x + W, y + H], [x + MAIN, y], [x + MAIN, y + H]]) {
+    g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  }
+  // ミシン目
+  g.strokeStyle = perf; g.lineWidth = 4; g.setLineDash([12, 10]);
+  g.beginPath(); g.moveTo(x + MAIN, y + R + 8); g.lineTo(x + MAIN, y + H - R - 8); g.stroke();
+  g.setLineDash([]);
+  // 本体の二重のわく
+  g.strokeStyle = rule; g.lineWidth = 2; g.strokeRect(x + 20, y + 20, MAIN - 40, H - 40);
+  g.lineWidth = 1.5; g.strokeRect(x + 28, y + 28, MAIN - 56, H - 56);
+  // 文字
+  text(gold ? '✦ GOLDEN TICKET ✦' : '✦ CODEFLOW · ROOM 402 ✦', center, y + 70, `700 22px ${CINZEL}`, rule);
+  text('ADMIT ONE', center, y + 152, `700 76px ${CINZEL}`, red);
+  text('特別室', center, y + 208, `46px ${YUSEI}`, ink);
+  text('THE SPECIAL ROOM', center, y + 236, `700 16px ${CINZEL}`, '#4E3550');
+  text('DATE', x + 56, y + 280, `700 17px ${CINZEL}`, rule, 'left');
+  text(date, x + 128, y + 280, `900 23px ${GOTHIC}`, ink, 'left');
+  text('KEY', x + 56, y + 314, `700 17px ${CINZEL}`, rule, 'left');
+  text('CodeFlow のスタンプ', x + 128, y + 314, `900 23px ${GOTHIC}`, ink, 'left');
+  text('No.', x + 56, y + 358, `500 26px ${MONO}`, red, 'left');
+  text(pad4(no), x + 104, y + 358, `500 48px ${MONO}`, red, 'left');
+  // スタッフの印（紙に刷ったように multiply で重ねる）
+  if (stamp) {
+    g.save(); g.globalCompositeOperation = 'multiply';
+    g.translate(x + MAIN - 120, y + H - 120); g.rotate(-.18); g.drawImage(stamp, -95, -95, 190, 190);
+    g.restore();
+  }
+  // 半券：縦の ADMIT ONE・パンチの穴・番号（90度回すと字は基準線の右に出るので、字の高さの半分だけ左にずらす）
+  g.save(); g.translate(stubX - 9, y + 44); g.rotate(Math.PI / 2);
+  text('ADMIT ONE', 0, 0, `700 26px ${CINZEL}`, red, 'left');
+  g.restore();
+  g.save(); g.translate(stubX - 34, y + 262); g.scale(68 / 80, 68 / 80);
+  g.fillStyle = NIGHT; g.fill(new Path2D(PUMPKIN));
+  g.restore();
+  text(pad4(no), stubX, y + 362, `500 28px ${MONO}`, ink);
+  g.restore();
+}
+
+async function savePhoto({ no, cells, lines, stampImage, date, gold }) {
   const W = 900, H = 1180;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
-  const font = (px, fam = "'Yusei Magic', sans-serif") => `${px}px ${fam}`;
-  g.fillStyle = '#F6E7C8'; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#3B2340'; g.fillRect(50, 50, W - 100, 820);
-  g.fillStyle = '#F4C451'; g.font = font(40, "'Zen Kaku Gothic New', sans-serif"); g.fillText('特別室 入室証', 100, 150);
-  g.fillStyle = '#F6E7C8'; g.font = font(120); g.fillText(`No.${pad4(no)}`, 100, 290);
-  g.fillStyle = '#D9C6A0'; g.font = font(40, "'Zen Kaku Gothic New', sans-serif"); g.fillText(`${date} ・ CodeFlow 402`, 100, 360);
-  const on = new Set(cells.filter((x) => x.filled).map((x) => x.index));
-  const line = new Set(lines.flat());
-  for (let i = 0; i < 9; i += 1) {
-    const x = 100 + (i % 3) * 120, y = 440 + Math.floor(i / 3) * 120;
-    g.fillStyle = line.has(i) ? '#F4C451' : on.has(i) ? '#FBE08A' : '#FFF6E2'; g.fillRect(x, y, 104, 104);
-    g.strokeStyle = on.has(i) ? '#EE7A2B' : '#C9AE84'; g.lineWidth = 8; g.setLineDash(on.has(i) ? [] : [14, 10]); g.strokeRect(x + 4, y + 4, 96, 96);
-  }
+  // 画面で使っていない書体もあるので、描く前に読み込んでおく（読めなくても、ほかの書体で描く）
+  await Promise.all([`700 76px ${CINZEL}`, `500 48px ${MONO}`, `46px ${YUSEI}`, `900 26px ${GOTHIC}`].map((f) => document.fonts?.load(f).catch(() => {})));
+  let stamp = null;
   if (stampImage) {
     const img = new Image(); img.src = `/stamps/${stampImage}`;
     await img.decode().catch(() => {});
-    if (img.naturalWidth) { g.save(); g.translate(660, 720); g.rotate(-.2); g.drawImage(img, -150, -150, 300, 300); g.restore(); }
+    if (img.naturalWidth) stamp = img;
   }
-  g.fillStyle = '#3B2340'; g.font = font(64); g.textAlign = 'center'; g.fillText('特別室に入りました！', W / 2, 1010);
-  g.fillStyle = '#4E3550'; g.font = font(34, "'Zen Kaku Gothic New', sans-serif"); g.fillText('学園祭スタンプラリー', W / 2, 1080);
+  g.fillStyle = '#F6E7C8'; g.fillRect(0, 0, W, H);
+  g.fillStyle = NIGHT; g.fillRect(50, 50, W - 100, 820);
+  // 夜空の星
+  g.fillStyle = '#F4C451';
+  for (const [sx, sy, s] of [[96, 92, 10], [800, 100, 8], [770, 560, 12], [90, 860 - 40, 7], [460, 84, 6]]) {
+    g.beginPath(); g.moveTo(sx, sy - s); g.lineTo(sx + s * .3, sy - s * .3); g.lineTo(sx + s, sy); g.lineTo(sx + s * .3, sy + s * .3);
+    g.lineTo(sx, sy + s); g.lineTo(sx - s * .3, sy + s * .3); g.lineTo(sx - s, sy); g.lineTo(sx - s * .3, sy - s * .3); g.closePath(); g.fill();
+  }
+  drawTicket(g, { x: 90, y: 130, no, date, stamp, gold });
+  // ビンゴカード（小さく）
+  const on = new Set(cells.filter((x) => x.filled).map((x) => x.index));
+  const line = new Set(lines.flat());
+  g.textAlign = 'left'; g.fillStyle = '#D9C6A0'; g.font = `700 20px ${CINZEL}`; g.fillText('MY BINGO', 110, 616);
+  for (let i = 0; i < 9; i += 1) {
+    const x = 110 + (i % 3) * 78, y = 634 + Math.floor(i / 3) * 78;
+    g.fillStyle = line.has(i) ? '#F4C451' : on.has(i) ? '#FBE08A' : '#FFF6E2'; g.fillRect(x, y, 68, 68);
+    g.strokeStyle = on.has(i) ? '#EE7A2B' : '#C9AE84'; g.lineWidth = 6; g.setLineDash(on.has(i) ? [] : [10, 8]); g.strokeRect(x + 3, y + 3, 62, 62);
+  }
+  g.setLineDash([]);
+  // 入場済みのゴム印
+  g.save(); g.translate(610, 740); g.rotate(-.14);
+  g.strokeStyle = '#EE7A2B'; g.lineWidth = 8; g.strokeRect(-150, -62, 300, 124);
+  g.lineWidth = 2; g.strokeRect(-138, -50, 276, 100);
+  g.fillStyle = '#EE7A2B'; g.textAlign = 'center'; g.font = `700 50px ${CINZEL}`; g.fillText('ADMITTED', 0, 8);
+  g.font = `500 22px ${MONO}`; g.fillText(`${date} · No.${pad4(no)}`, 0, 38);
+  g.restore();
+  g.fillStyle = '#3B2340'; g.font = `64px ${YUSEI}`; g.textAlign = 'center'; g.fillText('特別室に入りました！', W / 2, 1010);
+  g.fillStyle = '#4E3550'; g.font = `34px ${GOTHIC}`; g.fillText('学園祭スタンプラリー', W / 2, 1080);
   const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
   const file = new File([blob], `special-room-${pad4(no)}.png`, { type: 'image/png' });
   if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }).catch(() => {}); return; }
@@ -307,25 +388,24 @@ async function savePhoto({ no, cells, lines, stampImage, date }) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
-function Photo({ back, no, cells, lines, stampImage, date }) {
+// 画面の写真：パンチ済みの入室証（チケット）・小さなビンゴカード・入場済みのゴム印
+function Photo({ back, no, cells, lines, stampImage, date, gold = false }) {
   const [busy, setBusy] = useState(false);
   const on = new Set(cells.filter((x) => x.filled).map((x) => x.index));
   const line = new Set(lines.flat());
-  const save = async () => { setBusy(true); try { await savePhoto({ no, cells, lines, stampImage, date }); } finally { setBusy(false); } };
+  const save = async () => { setBusy(true); try { await savePhoto({ no, cells, lines, stampImage, date, gold }); } finally { setBusy(false); } };
   return (
     <>
       <Title name="記念写真" back={back} />
       <figure className="rd-box rd-sp-photo" style={{ margin: 0 }}>
         <div className="rd-sp-photo-pic">
-          <div>
-            <p className="rd-sp-pass-head">特別室 入室証</p>
-            <p className="rd-sp-pass-no">No.{pad4(no)}</p>
-            <p>{date} ・ CodeFlow 402</p>
+          <SpecialTicket no={no} date={date} stampImage={stampImage} gold={gold} punched />
+          <div className="rd-sp-photo-row">
+            <div className="rd-sp-mini" aria-hidden="true">
+              {Array.from({ length: 9 }, (_, i) => <span key={i} className={line.has(i) ? 'is-on is-line' : on.has(i) ? 'is-on' : ''} />)}
+            </div>
+            <p className="rd-sp-admitted" aria-hidden="true">ADMITTED<small>{date}</small></p>
           </div>
-          <div className="rd-sp-mini" aria-hidden="true">
-            {Array.from({ length: 9 }, (_, i) => <span key={i} className={line.has(i) ? 'is-on is-line' : on.has(i) ? 'is-on' : ''} />)}
-          </div>
-          {stampImage && <img className="rd-sp-photo-stamp" src={`/stamps/${stampImage}`} alt="" />}
         </div>
         <figcaption className="rd-sp-photo-cap">特別室に入りました！</figcaption>
       </figure>

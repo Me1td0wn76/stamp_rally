@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Night } from './parts.jsx';
+import SpecialTicket from './SpecialTicket.jsx';
 import { timeline, TIMING } from './specialData.js';
 
 // 特別室への入り口（隠し画面）。特定のスタッフのスタンプを押されたときだけ、スタンプを取った直後に全画面で出す。
-// ターミナルにコマンドが自動で打たれ → 画面がとけて流れ落ち → 扉の前で入室証にスタッフの印が押される → 「特別室に入る」
+// ターミナルにコマンドが自動で打たれ → 画面がとけて流れ落ち → 扉の前で入室証（チケット）にスタッフの印が押される → 「特別室に入る」
+// 「特別室に入る」を押すと、半券に改札のパンチ（かぼちゃの穴）を入れてから onEnter を呼ぶ
 // 動きはすべて CSS。各行が出る時刻は specialData.js の timeline() で計算して、CSS 変数（--d など）で渡す。
 // 「とばす」は時計を扉の時刻まで進める（中身を作り直して、扉の場面から始める）。動きを減らす設定の端末では、はじめから扉の場面を出す。
 //
@@ -12,6 +14,9 @@ import { timeline, TIMING } from './specialData.js';
 // freeze・still: 見本用。freeze(ms) の時刻の場面から始め、still なら動きを止めておく
 
 const pad4 = (n) => String(n).padStart(4, '0');
+const REDUCED = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// パンチを入れてから部屋へ進むまで(ms)
+const PUNCH_MS = 750;
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
@@ -107,8 +112,23 @@ function Line({ l }) {
 export default function SpecialEntry({ no = 1, stamps = 0, staff = '', stampImage = '', commits = 139, date, onEnter, freeze, still = false }) {
   const tl = useMemo(() => timeline({ no: pad4(no), stamps, staff, commits }), [no, stamps, staff, commits]);
   const [skipped, setSkipped] = useState(false);
+  const [punching, setPunching] = useState(false);
   const enterRef = useRef(null);
   const start = skipped ? tl.door : (freeze ?? 0);
+
+  // パンチを入れ終わったら部屋へ（onEnter は親が描き直すたびに変わるので、最新のものを ref から呼ぶ）
+  const onEnterRef = useRef(onEnter);
+  useEffect(() => { onEnterRef.current = onEnter; });
+  useEffect(() => {
+    if (!punching) return undefined;
+    const id = setTimeout(() => onEnterRef.current?.(), PUNCH_MS);
+    return () => clearTimeout(id);
+  }, [punching]);
+  const enter = () => {
+    if (punching) return;
+    if (REDUCED) onEnter?.();
+    else setPunching(true);
+  };
 
   // 扉の場面になったら「特別室に入る」にフォーカスを移す（キーボード・読み上げで続けて押せるように）
   useEffect(() => {
@@ -134,17 +154,9 @@ export default function SpecialEntry({ no = 1, stamps = 0, staff = '', stampImag
           <Night />
           <p className="rd-sp-sign">402 ・ 特別室</p>
           <Gate />
-          <section className="rd-box rd-sp-pass" aria-label="入室証">
-            <p className="rd-sp-pass-head">特別室 入室証</p>
-            <p className="rd-sp-pass-no">No.{pad4(no)}</p>
-            <dl className="rd-dl">
-              <dt>日付</dt><dd>{date ?? today()}</dd>
-              <dt>カギ</dt><dd>CodeFlow のスタンプ</dd>
-            </dl>
-            {stampImage && <img className="rd-sp-pass-stamp" src={`/stamps/${stampImage}`} alt="" />}
-          </section>
+          <SpecialTicket no={no} date={date ?? today()} stampImage={stampImage} punching={punching} />
           <p className="rd-note">カギを手に入れました。かぼちゃのメニューから、いつでも入れます</p>
-          <button ref={enterRef} type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={onEnter}>特別室に入る</button>
+          <button ref={enterRef} type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={enter} aria-disabled={punching}>{punching ? 'パチン！' : '特別室に入る'}</button>
         </div>
         {!skipped && <button type="button" className="rd-btn rd-btn--line rd-sp-skip" onClick={() => setSkipped(true)}>とばす ›</button>}
       </div>

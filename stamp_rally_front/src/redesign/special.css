@@ -70,14 +70,9 @@
 .rd-sp-gate .rd-sp-leaf--r { transform-origin: right center; --sk: 8deg; }
 @keyframes rd-sp-open { to { transform: scaleX(.18) skewY(var(--sk, -8deg)); } }
 .rd-sp-gate .rd-sp-glow { opacity: 0; animation: rd-sp-show 1ms linear calc(var(--door) + 1300ms - var(--freeze)) both; }
-/* 入室証：紙のカード。最後にスタッフの印がぺたんと押される */
-.rd-sp-pass { width: min(100%, 300px); padding: 16px 18px 18px; text-align: left; color: var(--ink); transform: rotate(-2deg);
-  animation: rd-card-in .45s cubic-bezier(.2, 1.3, .4, 1) calc(var(--door) - var(--freeze)) both; }
-.rd-sp-pass .rd-sp-pass-head, .rd-sp-photo .rd-sp-pass-head { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: var(--orange2); }
-.rd-sp-pass .rd-sp-pass-no, .rd-sp-photo .rd-sp-pass-no { font: 400 36px/1.15 var(--display); font-variant-numeric: tabular-nums; }
-.rd-sp-pass .rd-dl { grid-template-columns: 3.4em minmax(0, 1fr); font-size: 13px; margin-top: 4px; padding-right: 74px; }
-.rd-sp-pass-stamp { position: absolute; right: 12px; bottom: 10px; width: 76px; height: 76px; object-fit: contain; transform: rotate(-10deg);
-  animation: rd-sp-press .4s cubic-bezier(.2, .9, .3, 1.2) calc(var(--door) + 650ms - var(--freeze)) both; }
+/* 入室証（チケット）が飛んできて、最後にスタッフの印がぺたんと押される。チケットの形は下の「入室証」 */
+.rd-sp-door .rd-sp-tk { transform: rotate(-2deg); animation: rd-card-in .45s cubic-bezier(.2, 1.3, .4, 1) calc(var(--door) - var(--freeze)) both; }
+.rd-sp-door .rd-sp-tk-stamp { animation: rd-sp-press .4s cubic-bezier(.2, .9, .3, 1.2) calc(var(--door) + 650ms - var(--freeze)) both; }
 @keyframes rd-sp-press { 0% { opacity: 0; transform: scale(2.2) rotate(-24deg); } 70% { opacity: 1; transform: scale(.92) rotate(-8deg); } 100% { opacity: 1; transform: scale(1) rotate(-10deg); } }
 .rd-sp-door .rd-note { max-width: 300px; animation: rd-sp-show 1ms linear calc(var(--door) + 1100ms - var(--freeze)) both; }
 .rd-sp-door .rd-btn { align-self: stretch; max-width: 320px; margin: 0 auto; width: 100%; animation: rd-sp-show 1ms linear calc(var(--door) + 1100ms - var(--freeze)) both; }
@@ -85,6 +80,60 @@
 .rd-sp-skip { position: absolute; z-index: 3; right: 14px; top: calc(10px + env(safe-area-inset-top, 0px)); min-height: 36px; padding: 4px 14px; font-size: 13px;
   animation: rd-sp-hide 1ms linear calc(var(--melt) - var(--freeze)) both; }
 @keyframes rd-sp-hide { to { opacity: 0; visibility: hidden; } }
+
+/* -----------------------------------------------------------------
+   入室証（SpecialTicket.jsx）。西洋の古い劇場のチケット（ADMIT ONE）
+   左が本体、右が半券。四すみとミシン目の上下は mask で丸くえぐる（2枚の紙を並べ、それぞれの四すみをえぐる）。
+   大きさは --tk-s（1 で幅 315px）。中の寸法はすべて em（1em = 10px × --tk-s）
+   ----------------------------------------------------------------- */
+.rd-sp-tk {
+  --tk-r: .95em; --tk-paper: var(--paper2); --tk-ink: var(--ink); --tk-red: #B23A1E; --tk-rule: var(--orange2); --tk-perf: var(--kraft);
+  --tk-notch:
+    radial-gradient(circle at 0 0, #0000 var(--tk-r), #000 calc(var(--tk-r) + .5px)),
+    radial-gradient(circle at 100% 0, #0000 var(--tk-r), #000 calc(var(--tk-r) + .5px)),
+    radial-gradient(circle at 0 100%, #0000 var(--tk-r), #000 calc(var(--tk-r) + .5px)),
+    radial-gradient(circle at 100% 100%, #0000 var(--tk-r), #000 calc(var(--tk-r) + .5px));
+  position: relative; display: flex; width: min(100%, 31.5em); font-size: calc(10px * var(--tk-s, 1)); line-height: 1.3; color: var(--tk-ink); text-align: left; filter: var(--shadow);
+}
+.rd-sp-tk-main, .rd-sp-tk-stub { position: relative; background: var(--tk-paper);
+  -webkit-mask: var(--tk-notch); -webkit-mask-composite: source-in; mask: var(--tk-notch); mask-composite: intersect; }
+.rd-sp-tk-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .35em; padding: 1.6em 1.6em 1.4em; }
+/* 本体の二重のわく（すみはえぐった丸より内側に置く） */
+.rd-sp-tk-main::before { content: ""; position: absolute; inset: .8em; border: 1px solid var(--tk-rule); box-shadow: inset 0 0 0 2px var(--tk-paper), inset 0 0 0 3px var(--tk-rule); pointer-events: none; }
+/* p の文字は .rd-box p（記念写真の枠）より強くする */
+.rd-sp-tk .rd-sp-tk-top { position: relative; font: 700 .95em/1 'Cinzel', Georgia, serif; letter-spacing: .16em; color: var(--tk-rule); white-space: nowrap; }
+.rd-sp-tk .rd-sp-tk-admit { position: relative; font: 700 2.85em/1 'Cinzel', Georgia, serif; letter-spacing: .04em; color: var(--tk-red); white-space: nowrap; }
+.rd-sp-tk .rd-sp-tk-name { position: relative; font: 400 1.7em/1.1 var(--display); text-align: center; }
+.rd-sp-tk-name span { display: block; margin-top: .3em; font: 700 .46em/1 'Cinzel', Georgia, serif; letter-spacing: .26em; color: var(--ink2); }
+.rd-sp-tk-dl { position: relative; align-self: stretch; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: .1em .7em; margin-top: .2em; padding: 0 5.4em 0 .4em; font-size: 1.05em; }
+.rd-sp-tk-dl dt { font: 700 .74em/1.6 'Cinzel', Georgia, serif; letter-spacing: .14em; color: var(--tk-rule); }
+.rd-sp-tk-dl dd { font-weight: 900; overflow-wrap: anywhere; }
+.rd-sp-tk .rd-sp-tk-no { position: relative; align-self: flex-start; padding-left: .2em; font: 500 2em/1 var(--mono); letter-spacing: .04em; color: var(--tk-red); font-variant-numeric: tabular-nums; }
+.rd-sp-tk-no small { margin-right: .25em; font-size: .55em; }
+/* スタッフの印：紙に刷ったように見せる（multiply） */
+.rd-sp-tk-stamp { position: absolute; right: 1.1em; bottom: 1em; width: 7.4em; height: 7.4em; object-fit: contain; transform: rotate(-10deg); mix-blend-mode: multiply; }
+/* 半券：ミシン目（点線）で本体と分ける。上から ADMIT ONE・パンチの場所・番号 */
+.rd-sp-tk-stub { flex: none; width: 6.4em; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: .6em; padding: 1.5em 0 1.3em; }
+.rd-sp-tk-stub::before { content: ""; position: absolute; left: 0; top: var(--tk-r); bottom: var(--tk-r); border-left: 2px dashed var(--tk-perf); }
+.rd-sp-tk-stub-admit { writing-mode: vertical-rl; font: 700 1.05em/1 'Cinzel', Georgia, serif; letter-spacing: .18em; color: var(--tk-red); }
+.rd-sp-tk-stub-no { font: 500 1.15em/1 var(--mono); font-variant-numeric: tabular-nums; }
+.rd-sp-tk-punch { position: relative; width: 2.8em; aspect-ratio: 80 / 70; }
+/* 改札のパンチの穴（かぼちゃの形。後ろの夜空の色）。パンチを入れると、穴が開いて紙くずが落ちる */
+.rd-sp-tk-hole, .rd-sp-tk-chad { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.rd-sp-tk-hole { fill: var(--night); stroke: rgba(20, 8, 20, .35); stroke-width: 3; }
+.rd-sp-tk-chad { fill: var(--tk-paper-solid, var(--paper2)); stroke: var(--tk-perf); stroke-width: 2; }
+.rd-sp-tk.is-punching .rd-sp-tk-hole { animation: rd-sp-hole .22s cubic-bezier(.2, 1.5, .4, 1) both; }
+.rd-sp-tk.is-punching .rd-sp-tk-chad { animation: rd-sp-chad .75s cubic-bezier(.45, 0, .9, .5) .05s both; }
+.rd-sp-tk.is-punching .rd-sp-tk-stub { animation: rd-sp-nudge .25s ease-out; }
+@keyframes rd-sp-hole { from { transform: scale(0); } }
+@keyframes rd-sp-chad { to { transform: translate(1.4em, 11em) rotate(150deg) scale(.8); opacity: 0; } }
+@keyframes rd-sp-nudge { 40% { transform: translateY(3px) scale(.97); } }
+/* 金のチケット（金庫を開けた人）：金色の紙に光がすべる */
+.rd-sp-tk.is-gold {
+  --tk-paper: linear-gradient(118deg, #D9A02B 0%, #FBE08A 28%, #E8B83A 46%, #FFF2B8 60%, #D19424 80%, #F4C451 100%);
+  --tk-paper-solid: #F4C451; --tk-ink: #3B2340; --tk-red: #7A2E10; --tk-rule: #7A4A10; --tk-perf: #9C6A1A;
+}
+.rd-sp-tk.is-gold .rd-sp-tk-main::after { content: ""; position: absolute; inset: 0; background: var(--shine) no-repeat; background-size: 250% 100%; animation: rd-sp-shine 3.2s ease-in-out infinite; pointer-events: none; }
 
 /* -----------------------------------------------------------------
    特別室（SpecialRoom.jsx）
@@ -187,16 +236,17 @@
 .rd-sp-chips button:active { transform: translateY(2px); }
 
 /* 記念写真：入室証をチェキのような写真にする */
-.rd-sp-photo { align-self: center; width: min(100%, 300px); padding: 14px 14px 18px; gap: 10px; transform: rotate(-1.5deg); }
-.rd-sp-photo-pic { position: relative; display: flex; flex-direction: column; gap: 12px; min-height: 230px; padding: 16px 16px 18px; background: var(--night); color: var(--paper); }
-.rd-sp-photo .rd-sp-photo-pic .rd-sp-pass-head { color: var(--gold); }
-.rd-sp-photo .rd-sp-photo-pic .rd-sp-pass-no { color: var(--paper); font-size: 34px; }
-.rd-sp-photo .rd-sp-photo-pic p { font-size: 12px; font-weight: 700; color: var(--kraft2); }
+.rd-sp-photo { align-self: center; width: min(100%, 340px); padding: 12px 12px 16px; gap: 10px; transform: rotate(-1.5deg); }
+.rd-sp-photo-pic { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px 10px 18px; background: var(--night); color: var(--paper); }
+.rd-sp-photo .rd-sp-tk { --tk-s: .9; }
+.rd-sp-photo-row { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 10px; }
 .rd-sp-mini { display: grid; grid-template-columns: repeat(3, 26px); gap: 4px; }
 .rd-sp-mini span { height: 26px; border: 2px dashed var(--kraft); background: var(--paper2); }
 .rd-sp-mini span.is-on { border: 2px solid var(--orange); background: var(--gold2); }
 .rd-sp-mini span.is-line { background: var(--gold); }
-.rd-sp-photo-stamp { position: absolute; right: -6px; bottom: -14px; width: 118px; height: 118px; object-fit: contain; transform: rotate(-12deg); filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .3)); }
+/* 入場済みのゴム印 */
+.rd-sp-photo .rd-sp-admitted { padding: 6px 12px 5px; border: 3px solid var(--orange); outline: 1px solid var(--orange); outline-offset: -7px; color: var(--orange); font: 700 19px/1 'Cinzel', Georgia, serif; letter-spacing: .08em; text-align: center; transform: rotate(-8deg); }
+.rd-sp-admitted small { display: block; margin-top: 4px; font: 500 11px/1 var(--mono); letter-spacing: 0; }
 .rd-sp-photo-cap { font: 400 15px/1.4 var(--display); text-align: center; color: var(--ink); }
 
 /* -----------------------------------------------------------------
