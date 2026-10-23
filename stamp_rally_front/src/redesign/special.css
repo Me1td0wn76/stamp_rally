@@ -160,6 +160,14 @@
 @keyframes rd-sp-steam { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-3px); opacity: .5; } }
 @keyframes rd-sp-blink { 50% { opacity: 0; } }
 
+/* 本棚の上の黒猫：押すと、ふきだしでしゃべる */
+.rd-sp-cat { position: absolute; padding: 0; border: 0; border-radius: 40%; background: none; cursor: pointer; }
+.rd-sp-cat:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.rd-sp-meow-live { position: absolute; left: 31%; top: 25%; z-index: 2; max-width: 60%; pointer-events: none; }
+.rd-sp-meow { position: relative; display: inline-block; padding: 5px 10px 6px; border-radius: 10px; background: var(--paper2); color: var(--ink); font-size: 12px; font-weight: 900; line-height: 1.45; filter: drop-shadow(0 3px 0 rgba(20, 8, 20, .45)); transform-origin: left center; animation: rd-sp-meow .3s cubic-bezier(.2, 1.4, .4, 1) both; }
+.rd-sp-meow::before { content: ""; position: absolute; left: -7px; top: 55%; border: 7px solid transparent; border-left: 0; border-right-color: var(--paper2); }
+@keyframes rd-sp-meow { from { transform: translateY(6px) scale(.7); opacity: 0; } }
+
 /* 部屋の下のボタン（絵と同じ中身。押しやすさと読み上げのため） */
 .rd-sp-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .rd-sp-menu .rd-btn { justify-content: flex-start; padding-left: 14px; }
@@ -371,7 +379,7 @@
   .rd-cell.is-special::after, .rd-zk-card.is-special::after { content: none; }
   .rd-sp-glitter i { animation: none; opacity: 1; transform: rotate(45deg); }
   .rd-sp-sky i { animation: none; opacity: .7; }
-  .rd-sp-here i { animation: none; }
+  .rd-sp-here i, .rd-sp-meow { animation: none; }
   /* 金庫は扉を回さずに開け、警報もゆらさない */
   .rd-sf-door, .rd-sf-dial, .rd-sf-glow { transition: none; }
   .rd-sf-safe.is-open .rd-sf-door { transform: none; opacity: 0; }

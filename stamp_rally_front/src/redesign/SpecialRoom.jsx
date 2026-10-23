@@ -3,7 +3,7 @@ import { Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import SpecialTicket, { PUMPKIN } from './SpecialTicket.jsx';
 import SpecialSafe from './SpecialSafe.jsx';
-import { MEMBERS, STATS, NIGHT_OWL, HISTORY, GALLERY, ROOM_ITEMS, FORTUNES, HELP, GIT_LOG } from './specialData.js';
+import { MEMBERS, STATS, NIGHT_OWL, HISTORY, GALLERY, ROOM_ITEMS, FORTUNES, HELP, GIT_LOG, TREATS, SECRET_NOTE, CAT_LINES } from './specialData.js';
 
 // 特別室（隠し画面）。入り口（SpecialEntry.jsx）で入室証をもらった人だけが入れる。
 // 部屋の絵に置いてあるものを押すと、それぞれの中身が開く：メンバー（トレカ）・メイキング・ターミナル・記念写真
@@ -99,8 +99,25 @@ const HOT = {
   live: [14, 14, 94, 94], how: [218, 20, 112, 80], safe: [256, 192, 64, 46],
 };
 
+// 本棚の上の黒猫（viewBox の座標）。押すとしゃべる（窓と少し重なるので、押せる場所のいちばん上に置く）
+const CAT = [58, 90, 40, 31];
+const MEOW_MS = 2800;
+
 // here: いまこの部屋にいる人の数（「いまの会場」の here。まだ分からなければ出さない）
 function Room({ no, open, here }) {
+  // 黒猫のせりふ（at を変えて、同じせりふでも出し直す）
+  const [meow, setMeow] = useState(null);
+  useEffect(() => {
+    if (!meow) return undefined;
+    const id = setTimeout(() => setMeow(null), MEOW_MS);
+    return () => clearTimeout(id);
+  }, [meow]);
+  const talk = () => {
+    let i = Math.floor(Math.random() * CAT_LINES.length);
+    if (CAT_LINES[i] === meow?.text) i = (i + 1) % CAT_LINES.length;
+    setMeow({ text: CAT_LINES[i], at: Date.now() });
+  };
+  const [cx, cy, cw, ch] = CAT;
   return (
     <>
       <Title name="特別室" sub={`No.${pad4(no)}`} />
@@ -119,7 +136,11 @@ function Room({ no, open, here }) {
               </button>
             );
           })}
+          <button type="button" className="rd-sp-cat" onClick={talk} aria-label="黒猫"
+            style={{ left: `${(cx / 340) * 100}%`, top: `${(cy / 290) * 100}%`, width: `${(cw / 340) * 100}%`, height: `${(ch / 290) * 100}%` }} />
         </div>
+        {/* 読み上げの枠はいつも置いておき、中のふきだしだけを作り直す（同じせりふでも出てくる動きをさせるため） */}
+        <p className="rd-sp-meow-live" role="status">{meow && <span key={meow.at} className="rd-sp-meow">{meow.text}</span>}</p>
       </div>
       <div className="rd-sp-menu">
         {ROOM_ITEMS.filter((it) => it.ready).map((it) => (
@@ -234,10 +255,14 @@ function runCommand(input, ctx) {
     case '': return [];
     case 'help': return HELP.map(([c, d]) => ({ kind: 'out', text: `${c.padEnd(18)}${d}` }));
     case 'whoami': return [{ kind: 'out', text: `guest #${pad4(ctx.no)}（特別室の入室証あり）` }];
-    case 'ls': return [{ kind: 'out', text: 'members/  making-of/  photo/  window/  blackboard/  safe/' }];
+    case 'ls': return [{ kind: 'out', text: 'members/  making-of/  photo/  window/  blackboard/  safe/  secret.txt' }];
     case 'cat':
       if (arg === 'members.txt') return ctx.members.map((m) => ({ kind: 'out', text: `${m.name.padEnd(12)}${m.parts[0]}` }));
-      return [{ kind: 'err', text: `cat: ${arg || '(なし)'}: ファイルがありません（cat members.txt）` }];
+      if (arg === 'secret.txt') return SECRET_NOTE.map((t) => ({ kind: 'ok', text: t }));
+      if (!arg) return [{ kind: 'out', text: 'にゃー。cat には、読みたいファイルの名前を渡すにゃ（cat members.txt）' }];
+      return [{ kind: 'err', text: `cat: ${arg}: ファイルがありません（cat members.txt）` }];
+    case 'trick': return [{ kind: 'art', text: GHOST }, { kind: 'warn', text: 'ばあ！ いたずらされました。' }];
+    case 'treat': return [{ kind: 'ok', text: TREATS[Math.floor(Math.random() * TREATS.length)] }];
     case 'git': return GIT_LOG.map((l) => ({ kind: 'out', text: l }));
     case 'fortune': return [{ kind: 'ok', text: FORTUNES[Math.floor(Math.random() * FORTUNES.length)] }];
     case 'pumpkinsay': return [{ kind: 'art', text: pumpkinsay(arg) }];
@@ -247,7 +272,10 @@ function runCommand(input, ctx) {
   }
 }
 
-const QUICK = ['help', 'whoami', 'fortune', 'git log', 'pumpkinsay'];
+// trick で出るおばけ
+const GHOST = ['   .-.', '  (o o)', '  | O |', '  |   |', "  '~~~'"].join('\n');
+
+const QUICK = ['help', 'whoami', 'fortune', 'git log', 'pumpkinsay', 'treat'];
 const WELCOME = [{ kind: 'out', text: '特別室のターミナルです。help と打つと、使えるコマンドが出ます。' }];
 
 function Term({ back, no, history }) {
