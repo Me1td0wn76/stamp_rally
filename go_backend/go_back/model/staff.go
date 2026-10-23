@@ -28,7 +28,7 @@ type staffToken struct {
 
 var staffTokens = []staffToken{
 	{SpotID: 1, Staff: "Me1td0wn76", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw", StampImage: "Me1td0wn76_stamp.png"},
-	{SpotID: 1, Staff: "スタッフ2", QrToken: "fUAtG4HeJkFkUyz7LUJqdw", StampImage: "staff2.svg"},
+	{SpotID: 1, Staff: "Tongari-Boy", QrToken: "fUAtG4HeJkFkUyz7LUJqdw", StampImage: "UCI_stamp.png"},
 	{SpotID: 1, Staff: "スタッフ3", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff3.svg"},
 }
 
