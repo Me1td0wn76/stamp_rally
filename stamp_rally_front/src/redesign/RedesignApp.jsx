@@ -184,7 +184,7 @@ function RedesignApp() {
       before={<Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />}
       after={(
         <>
-          <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} />
+          <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} special={special !== null} />
           {secretOpen && (
             <Suspense fallback={<div className="rd-wg rd-wg--loading"><Loader size="full" /></div>}>
               <WitchGame onBack={leaveSecret} />
