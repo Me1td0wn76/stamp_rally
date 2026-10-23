@@ -110,7 +110,7 @@ export const ROOM_ITEMS = [
   { key: 'making', label: 'メイキング', icon: 'album', ready: true },
   { key: 'term', label: 'ターミナル', icon: 'monitor', ready: true },
   { key: 'photo', label: '記念写真', icon: 'camera', ready: true },
-  { key: 'live', label: 'いまの会場', icon: 'window', ready: false },
+  { key: 'live', label: 'いまの会場', icon: 'window', ready: true },
   { key: 'how', label: 'しくみ', icon: 'board', ready: false },
   { key: 'safe', label: '金庫', icon: 'safe', ready: true },
 ];

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Title } from './parts.jsx';
+import Loader from './Loader.jsx';
 import SpecialTicket, { PUMPKIN } from './SpecialTicket.jsx';
 import SpecialSafe from './SpecialSafe.jsx';
 import { MEMBERS, STATS, NIGHT_OWL, HISTORY, GALLERY, ROOM_ITEMS, FORTUNES, HELP, GIT_LOG } from './specialData.js';
@@ -98,11 +99,13 @@ const HOT = {
   live: [14, 14, 94, 94], how: [218, 20, 112, 80], safe: [256, 192, 64, 46],
 };
 
-function Room({ no, open }) {
+// here: いまこの部屋にいる人の数（「いまの会場」の here。まだ分からなければ出さない）
+function Room({ no, open, here }) {
   return (
     <>
       <Title name="特別室" sub={`No.${pad4(no)}`} />
       <p className="rd-msg">CodeFlow の教室の、さらに奥。気になるものを押してみてください。</p>
+      {here > 0 && <p className="rd-sp-here"><i aria-hidden="true" />いま {here}人 がこの部屋にいます{here === 1 ? '（あなただけ）' : ''}</p>}
       <div className="rd-sp-scene">
         <RoomArt />
         <div className="rd-sp-hots" style={{ position: 'absolute', inset: 8 }}>
@@ -416,7 +419,53 @@ function Photo({ back, no, cells, lines, stampImage, date, gold = false }) {
   );
 }
 
+// ---------------------------------------------------------------- いまの会場（窓から会場をのぞく）
+// live: GET /api/special-room/live の中身（null: 取っている途中 / { error: ステータス }: 取れなかった）
+const num = (n) => n.toLocaleString('ja-JP');
+function Live({ back, live }) {
+  let body;
+  if (!live) {
+    body = <Loader />;
+  } else if (live.error !== undefined) {
+    body = (
+      <section className="rd-box rd-box--lead">
+        <p role="status">{live.error === 401 || live.error === 403
+          ? 'いまの会場は、特別室のカギ（CodeFlow のスタンプ）を持っている人だけが見られます。サーバーが新しくなったときは、もう一度スタンプを取ってください'
+          : '会場の様子を取れませんでした。少しして、もう一度開いてください'}</p>
+      </section>
+    );
+  } else {
+    const rare = live.players > 0 ? Math.max(1, Math.round((live.entrants / live.players) * 100)) : 0;
+    body = (
+      <>
+        <div className="rd-box rd-sp-live-here">
+          <span>いま この特別室にいる人</span>
+          <b>{num(live.here)}<small>人</small></b>
+          <p>あなたもふくめて。特別室を開いている人を数えています</p>
+        </div>
+        <div className="rd-sp-stats">
+          <div className="rd-box rd-sp-stat"><span>参加した人</span><b>{num(live.players)}<small>人</small></b></div>
+          <div className="rd-box rd-sp-stat"><span>押されたスタンプ</span><b>{num(live.stamps)}<small>個</small></b></div>
+          <div className="rd-box rd-sp-stat"><span>特別室に入った人</span><b>{num(live.entrants)}<small>人</small></b></div>
+          <div className="rd-box rd-sp-stat"><span>あなたの入室番号</span><b><small>No.</small>{pad4(live.no)}</b></div>
+        </div>
+        {rare > 0 && <p className="rd-sp-live-rare">参加した人のうち、特別室に入れたのは <b>{rare}%</b></p>}
+      </>
+    );
+  }
+  return (
+    <>
+      <Title name="いまの会場" back={back} />
+      <p className="rd-note">窓から、学園祭の会場をのぞいています。10秒ごとに新しくなります</p>
+      {body}
+    </>
+  );
+}
+
 // ---------------------------------------------------------------- 本体
+// 「いまの会場」を取りに行く間隔(ms)。特別室を開いている間はずっと取りに行く（サーバーはこれで「いま部屋にいる人」を数える）
+const LIVE_MS = 10000;
+
 // 金庫をいちばん早く開けた回数（まだ開けていなければ 0）。開けた人は金のチケットになる。この端末にだけ保存する
 const SAFE_KEY = 'rd.safeBest';
 function readSafeBest() { try { return Number(localStorage.getItem(SAFE_KEY)) || 0; } catch { return 0; } }
@@ -440,7 +489,28 @@ export default function SpecialRoom({ no = 1, cells, lines, stampImage = '', dat
     }).catch(() => {});
     return () => { alive = false; };
   }, [cells]);
+  // いまの会場：開いている間は LIVE_MS ごとに取る（画面が裏に回っているときは取らない）
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      if (document.hidden) return;
+      try {
+        const res = await fetch('/api/special-room/live');
+        const data = res.ok ? await res.json() : { error: res.status };
+        if (alive) setLive(data);
+      } catch {
+        // 通信できなかったときは、前に取れた数字があればそのまま出しておく
+        if (alive) setLive((l) => l ?? { error: 0 });
+      }
+    };
+    load();
+    const id = setInterval(load, LIVE_MS);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
   const toRoom = { label: '特別室', onClick: () => setView('room') };
+  if (view === 'live') return <Live back={toRoom} live={live} />;
   if (view === 'members') return <Members back={toRoom} flipped={flipped} avatars={avatars} />;
   if (view === 'making') return <Making back={toRoom} />;
   if (view === 'term') return <Term back={toRoom} no={no} history={history} />;
@@ -448,7 +518,7 @@ export default function SpecialRoom({ no = 1, cells, lines, stampImage = '', dat
   if (view === 'safe') return <SpecialSafe back={toRoom} best={safeBest} onOpen={openSafe} onPhoto={() => setView('photo')} no={no} date={date} stampImage={stampImage} />;
   return (
     <>
-      <Room no={no} open={setView} />
+      <Room no={no} open={setView} here={live?.here} />
       <button type="button" className="rd-btn rd-btn--line" onClick={onExit}>← ビンゴに戻る</button>
     </>
   );

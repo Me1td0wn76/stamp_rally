@@ -224,6 +224,18 @@
 .rd-sp-src { font-size: 11px; font-weight: 700; color: var(--kraft2); text-align: right; }
 .rd-sp-h { font: 400 20px/1.3 var(--display); color: var(--paper); }
 
+/* いまの会場：いま部屋にいる人を大きく出し、会場全体の数字はメイキングと同じ札で並べる */
+.rd-sp-here { flex-shrink: 0; align-self: flex-start; display: flex; align-items: center; gap: 8px; padding: 4px 12px 5px; background: rgba(18, 10, 22, .55); font-size: 13px; font-weight: 900; color: var(--gold2); clip-path: var(--cut-tag); }
+.rd-sp-here i { width: 9px; height: 9px; border-radius: 50%; background: #7BD88F; box-shadow: 0 0 0 0 rgba(123, 216, 143, .7); animation: rd-sp-pulse 1.8s ease-out infinite; }
+@keyframes rd-sp-pulse { 70% { box-shadow: 0 0 0 8px rgba(123, 216, 143, 0); } 100% { box-shadow: 0 0 0 0 rgba(123, 216, 143, 0); } }
+.rd-sp-live-here { flex-shrink: 0; align-items: center; gap: 2px; padding: 16px; text-align: center; --pc: var(--deep); color: var(--paper); }
+.rd-sp-live-here span { font-size: 13px; font-weight: 900; color: var(--kraft2); }
+.rd-sp-live-here b { font: 400 54px/1.05 var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.rd-sp-live-here b small { margin-left: 4px; font-size: 18px; color: var(--paper); }
+.rd-box.rd-sp-live-here p { font-size: 12px; color: var(--kraft2); }
+.rd-sp-live-rare { flex-shrink: 0; font-size: 14px; font-weight: 900; color: var(--paper); text-align: center; }
+.rd-sp-live-rare b { font: 400 22px/1 var(--display); color: var(--gold); }
+
 /* 自由に打てるターミナル */
 .rd-sp-tty { position: relative; display: flex; flex-direction: column; gap: 3px; min-height: 340px; padding: 12px 14px 10px; background: var(--term) repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, .025) 3px 4px); color: var(--paper); font: 500 13px/1.55 var(--mono); clip-path: var(--cut-box); filter: var(--shadow); }
 .rd-sp-tty .rd-sp-ln { animation: none; }
@@ -359,6 +371,7 @@
   .rd-cell.is-special::after, .rd-zk-card.is-special::after { content: none; }
   .rd-sp-glitter i { animation: none; opacity: 1; transform: rotate(45deg); }
   .rd-sp-sky i { animation: none; opacity: .7; }
+  .rd-sp-here i { animation: none; }
   /* 金庫は扉を回さずに開け、警報もゆらさない */
   .rd-sf-door, .rd-sf-dial, .rd-sf-glow { transition: none; }
   .rd-sf-safe.is-open .rd-sf-door { transform: none; opacity: 0; }
