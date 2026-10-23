@@ -11,7 +11,8 @@
 .rd-sp-bar-top i:nth-child(2) { background: var(--gold); }
 .rd-sp-bar-top i:nth-child(3) { background: #4E6B2A; }
 .rd-sp-bar-top span { margin-left: 6px; }
-.rd-sp-lines { display: flex; flex-direction: column; gap: 3px; font: 500 13px/1.55 var(--mono); }
+.rd-sp-screen { flex: 1; min-height: 0; overflow: hidden; }
+.rd-sp-lines { position: relative; display: flex; flex-direction: column; gap: 3px; font: 500 13px/1.55 var(--mono); }
 .rd-sp-ln { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; text-shadow: 0 0 6px rgba(246, 231, 200, .25);
   animation: rd-sp-show 1ms linear calc(var(--d) - var(--freeze)) both; }
 .rd-sp-ln--cmd { margin-top: 8px; color: var(--paper); }
@@ -23,16 +24,23 @@
 .rd-sp-ln--ok { padding-left: 2ch; color: var(--gold); }
 .rd-sp-ln--pw { padding-left: 2ch; color: var(--kraft2); }
 .rd-sp-ln--bar { padding-left: 2ch; display: flex; align-items: center; gap: 10px; color: var(--kraft2); }
+/* ASCII アート：上から1行ずつ刷り出す */
+.rd-sp-ln--art { padding-left: 2ch; font: 500 12px/1.2 var(--mono); white-space: pre; overflow: hidden; overflow-wrap: normal; color: var(--orange); text-shadow: 0 0 8px rgba(238, 122, 43, .5);
+  animation: rd-sp-show 1ms linear calc(var(--d) - var(--freeze)) both, rd-sp-print var(--dur) steps(var(--n)) calc(var(--d) - var(--freeze)) backwards; }
+.rd-sp-ln--art.is-gold { color: var(--gold); text-shadow: 0 0 8px rgba(244, 196, 81, .5); }
+.rd-sp-ln--art.is-braille { font-family: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', sans-serif; line-height: 1; color: var(--paper); text-shadow: 0 0 6px rgba(246, 231, 200, .3); }
+@keyframes rd-sp-print { from { clip-path: inset(0 0 100% 0); } }
 .rd-sp-type { display: inline-block; vertical-align: bottom; max-width: 100%; overflow: hidden; white-space: nowrap; width: calc(var(--n) * 1ch);
-  animation: rd-sp-type var(--dur) steps(var(--n)) calc(var(--d) - var(--freeze)) both; }
-.rd-sp-ln--cmd::after, .rd-sp-ln--pw::after { content: ""; display: inline-block; width: .6em; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--paper);
-  animation: rd-sp-caret calc(var(--dur) + 180ms) steps(1, end) calc(var(--d) - var(--freeze)) both; }
+  animation: rd-sp-type var(--dur) steps(var(--n)) calc(var(--d) - var(--freeze)) backwards; }
+.rd-sp-ln--cmd::after, .rd-sp-ln--pw::after { content: ""; display: inline-block; width: .6em; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--paper); opacity: 0;
+  animation: rd-sp-caret calc(var(--dur) + 180ms) steps(1, end) calc(var(--d) - var(--freeze)) backwards; }
 .rd-sp-meter { flex: none; display: grid; grid-template-columns: repeat(10, 7px); gap: 2px; padding: 2px; box-shadow: inset 0 0 0 1px var(--kraft); }
 .rd-sp-meter i { height: 9px; background: var(--gold); transform-origin: left; animation: rd-sp-grow 1ms linear calc(var(--d) + var(--i) * 26ms - var(--freeze)) both; }
 .rd-sp-meter.is-hot i { background: var(--orange); box-shadow: 0 0 6px rgba(238, 122, 43, .8); }
 @keyframes rd-sp-show { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rd-sp-type { from { width: 0; } }
-@keyframes rd-sp-caret { from { opacity: 1; } to { opacity: 0; } }
+/* steps() の終わりは、時刻の小数の誤差で最後の1こまが出ないことがあるので、終わったら元の形（全部見える・カーソルは消える）に戻す（backwards） */
+@keyframes rd-sp-caret { from, to { opacity: 1; } }
 @keyframes rd-sp-grow { from { transform: scaleX(0); } }
 @keyframes rd-sp-shake { 0%, 100% { transform: translate(0); } 20% { transform: translate(-3px, 1px); } 40% { transform: translate(3px, -1px); } 60% { transform: translate(-2px, 2px); } 80% { transform: translate(2px, -1px); } }
 @keyframes rd-sp-sink { to { transform: translateY(26%) scaleY(1.25); filter: blur(2px); opacity: 0; } }

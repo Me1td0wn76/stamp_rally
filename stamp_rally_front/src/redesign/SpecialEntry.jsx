@@ -91,6 +91,11 @@ function Line({ l }) {
       </p>
     );
   }
+  if (l.kind === 'art') {
+    return (
+      <pre className={`rd-sp-ln rd-sp-ln--art${l.tone ? ` is-${l.tone}` : ''}`} style={{ ...style, '--n': l.text.split('\n').length }}>{l.text}</pre>
+    );
+  }
   return <p className={`rd-sp-ln rd-sp-ln--${l.kind}`} style={style}>{l.text}</p>;
 }
 
@@ -119,6 +124,55 @@ export default function SpecialEntry({ no = 1, stamps = 0, staff = '', stampImag
     return () => clearTimeout(id);
   }, [tl, start, still]);
 
+  // 画面に入りきらない出力は、本物のターミナルのように上へ流す（アートは1行ずつ）。アートは幅に収まるように字を小さくする
+  // 書体が読み込まれて行の折れ方が変わったり、画面が回ったりしたら、組み立て直す（ResizeObserver）
+  const screenRef = useRef(null);
+  const linesRef = useRef(null);
+  useEffect(() => {
+    const screen = screenRef.current, box = linesRef.current;
+    if (!screen || !box || REDUCED || typeof ResizeObserver === 'undefined') return undefined;
+    const t0 = performance.now();
+    let anim = null, raf = 0;
+    const build = () => {
+      anim?.cancel();
+      anim = null;
+      for (const el of box.querySelectorAll('.rd-sp-ln--art')) {
+        el.style.fontSize = '';
+        if (el.scrollWidth > el.clientWidth) el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * (el.clientWidth / el.scrollWidth) * 0.98}px`;
+      }
+      const steps = [];
+      let shift = 0;
+      [...box.children].forEach((el, i) => {
+        const l = tl.lines[i];
+        const rows = l.kind === 'art' ? l.text.split('\n').length : 1;
+        for (let r = 0; r < rows; r += 1) {
+          const need = Math.ceil(el.offsetTop + (el.offsetHeight * (r + 1)) / rows - screen.clientHeight);
+          if (need > shift) { steps.push([l.at + r * TIMING.art, need]); shift = need; }
+        }
+      });
+      if (!steps.length) return;
+      const frames = [{ offset: 0, transform: 'translateY(0)' }];
+      let prev = 0, last = 0;
+      for (const [at, y] of steps) {
+        const o = Math.min(1, Math.max(last, at / tl.melt));
+        last = Math.min(1, o + 1e-4);
+        frames.push({ offset: o, transform: `translateY(${-prev}px)` }, { offset: last, transform: `translateY(${-y}px)` });
+        prev = y;
+      }
+      frames.push({ offset: 1, transform: `translateY(${-prev}px)` });
+      anim = box.animate(frames, { duration: tl.melt, fill: 'forwards' });
+      anim.currentTime = start + (performance.now() - t0);
+      if (still) anim.pause();
+    };
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(build);
+    });
+    ro.observe(box);
+    ro.observe(screen);
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); anim?.cancel(); };
+  }, [tl, start, still]);
+
   const style = { '--freeze': `${start}ms`, '--melt': `${tl.melt}ms`, '--door': `${tl.door}ms`, '--melt-len': `${TIMING.meltLen}ms` };
   return (
     <div className={`rd-sp-entry${still ? ' is-still' : ''}`} role="dialog" aria-modal="true" aria-label="特別室の入り口" style={style}>
@@ -126,8 +180,10 @@ export default function SpecialEntry({ no = 1, stamps = 0, staff = '', stampImag
       <div key={skipped ? 'door' : 'all'}>
         <div className="rd-sp-term" aria-hidden="true">
           <div className="rd-sp-bar-top"><i /><i /><i /><span>guest@codeflow — 402</span></div>
-          <div className="rd-sp-lines">
-            {tl.lines.map((l, i) => <Line key={i} l={l} />)}
+          <div className="rd-sp-screen" ref={screenRef}>
+            <div className="rd-sp-lines" ref={linesRef}>
+              {tl.lines.map((l, i) => <Line key={i} l={l} />)}
+            </div>
           </div>
         </div>
         <Melt />

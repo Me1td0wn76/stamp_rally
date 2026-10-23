@@ -1,28 +1,73 @@
+const KEY_ART = String.raw`  .--.
+ /.-. '----------.
+ \'-' .--"--""-"-'
+  '--'`;
+
+const NAME_ART = " __  __       _ _       _  __\n|  \\/  | ___ / | |_  __| |/  \\ __ __ __ _ _\n| |\\/| |/ -_)| |  _|/ _` | () |\\ V  V /| ' \\\n|_|  |_|\\___||_|\\__|\\__,_|\\__/  \\_/\\_/ |_||_|";
+
+const CHARACTER_ART = `⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⢀⠊
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⡠⣶⣡⣴⡲⠤⠄⣤⣤⣴⣾⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠓⣄⠀⠀⠀⡇⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠜⣓⣽⣿⣿⣷⣶⣿⣿⣿⣿⣿⣿⣿⡟⠃⣠⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢆⠀⠀⠡⡀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡴⣄⠐⢁⣡⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⡇⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡘⢁⢣⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠇⠀⠀⢰⠁⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠰⡷⣣⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣋⣻⣿⣿⣿⡿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠔⠁⠀⣀⠂⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠬⠂⣺⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠉⠁⠀⣄⢻⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡪⠴⠒⠉⠁⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠟⡎⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡁⠀⠀⠀⠈⠉⠈⢊⡂⢤⠀⠀⠀⠀⡠⠔⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡰⣱⣿⣿⣿⣿⣿⣿⣿⢻⢚⢿⣿⣿⠉⠀⠀⠀⠀⠀⠀⠀⢰⠏⠀⠀⠠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢭⣽⣿⣿⣿⣿⣿⣿⣿⣿⣄⠣⠽⠝⢿⠃⠀⠀⠀⠀⠀⠀⢀⠠⡷⠾⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠛⣿⣿⣿⣿⣿⣿⣿⣿⣿⢒⢤⣦⠀⠀⠀⠀⠀⠀⠀⠀⣴⡋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠋⣿⣿⣿⣿⣿⣿⣿⡟⠒⠀⡈⠑⠢⣤⠄⣀⡀⠀⠀⢠⡧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠾⢿⣿⣿⣟⡋⠁⠀⠀⠰⠀⠀⠀⠑⣦⠒⠛⠊⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣼⣁⠀⠀⠀⠈⠉⠐⠢⠇⡀⠀⣰⡞⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣷⣦⣄⠀⠀⠀⠀⠀⠈⠑⡏⠪⢑⠢⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣶⣿⣿⣿⣿⣿⣿⣿⣷⣄⣀⠀⠀⠀⢸⠀⠀⣠⠼⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣍⠂⠀⠘⡆⠰⡅⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣦⡀⡇⣰⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡍⠻⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡀⠹⣿⣿⣿⣿⣷⠀⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⣿⣿⣿⣿⣿⣧⡌⠻⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⢿⢿⡿⡿⢿⢿⡿⡿⢿⠿⡿⣿⢿⠿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`;
+
 export const ENTRY_SCRIPT = [
   { kind: 'cmd', text: 'whoami' },
-  { kind: 'out', text: 'guest #{no}（スタンプ {stamps} / 9）' },
+  { kind: 'out', text: 'guest #{no} (stamps: {stamps}/9)' },
   { kind: 'cmd', text: 'stamp --read' },
-  { kind: 'out', text: 'CodeFlow のスタンプを読み取りました' },
-  { kind: 'out', text: '押したスタッフ …… {staff}' },
-  { kind: 'warn', text: '!! シークレットキーが含まれています' },
+  { kind: 'out', text: 'Reading the CodeFlow stamp...' },
+  { kind: 'out', text: 'Stamped by ...... {staff}' },
+  { kind: 'warn', text: '!! Secret key detected' },
+  { kind: 'art', text: KEY_ART, tone: 'gold' },
   { kind: 'cmd', text: 'sudo unlock special-room' },
-  { kind: 'pw', text: '[sudo] guest のパスワード: ', dots: 7 },
-  { kind: 'err', text: 'パスワードがちがいます。ヒント：今日の合言葉' },
-  { kind: 'pw', text: '[sudo] guest のパスワード: ', dots: 14 },
-  { kind: 'ok', text: '認証しました（trick-or-stamp）' },
+  { kind: 'pw', text: '[sudo] password for guest: ', dots: 7 },
+  { kind: 'err', text: 'Sorry, try again. (hint: magic words)' },
+  { kind: 'pw', text: '[sudo] password for guest: ', dots: 14 },
+  { kind: 'ok', text: 'Authenticated (trick-or-stamp)' },
   { kind: 'cmd', text: 'git clone codeflow/special-room' },
   { kind: 'out', text: "Cloning into 'special-room'..." },
   { kind: 'out', text: 'Receiving objects: 100% ({commits}/{commits}), done.' },
+  { kind: 'cmd', text: 'cat special-room/README' },
+  { kind: 'art', text: NAME_ART },
+  { kind: 'art', text: CHARACTER_ART, tone: 'braille' },
   { kind: 'cmd', text: './meltdown.sh --force' },
-  { kind: 'bar', text: '炉心温度  36℃', fill: 2 },
-  { kind: 'bar', text: '炉心温度 180℃', fill: 5 },
-  { kind: 'bar', text: '炉心温度 666℃', fill: 10, hot: true },
-  { kind: 'warn', text: 'WARNING: ふつうの画面がとけています' },
-  { kind: 'warn', text: 'WARNING: とめられません' },
+  { kind: 'bar', text: 'CORE TEMP  36°C', fill: 2 },
+  { kind: 'bar', text: 'CORE TEMP 180°C', fill: 5 },
+  { kind: 'bar', text: 'CORE TEMP 666°C', fill: 10, hot: true },
+  { kind: 'warn', text: 'WARNING: the normal screen is melting' },
+  { kind: 'warn', text: 'WARNING: unable to stop' },
   { kind: 'cmd', text: 'cd special-room && open .' },
 ];
 
-export const TIMING = { start: 400, char: 24, dot: 40, line: 105, afterCmd: 150, beforeCmd: 220, bar: 240, melt: 380, meltLen: 1400, door: 600 };
+export const TIMING = { start: 400, char: 24, dot: 40, line: 105, art: 45, afterCmd: 150, beforeCmd: 220, bar: 240, melt: 380, meltLen: 1400, door: 600 };
 export function timeline(vars) {
   let t = TIMING.start;
   const lines = ENTRY_SCRIPT.map((l, i) => {
@@ -38,6 +83,9 @@ export function timeline(vars) {
     } else if (l.kind === 'bar') {
       dur = TIMING.bar;
       t = at + dur + TIMING.line;
+    } else if (l.kind === 'art') {
+      dur = text.split('\n').length * TIMING.art;
+      t = at + dur + TIMING.line * 3;
     } else {
       t = at + TIMING.line;
     }
