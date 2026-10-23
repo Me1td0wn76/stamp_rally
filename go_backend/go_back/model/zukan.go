@@ -21,6 +21,7 @@ type ZukanEntry struct {
 	Place      string    `json:"place,omitempty"`       // その階のどこか
 	Intro      string    `json:"intro,omitempty"`       // 説明文(未記入なら空。画面は「準備中」と出す)
 	StampImage string    `json:"stamp_image,omitempty"` // 取ったスタンプの画像(ビンゴのマスと同じもの。空ならかぼちゃ)
+	Special    bool      `json:"special,omitempty"`     // 特別室を開くスタッフのスタンプか(ビンゴのマスと同じ。画面ではキラキラを付ける)
 	StampedAt  time.Time `json:"stamped_at,omitzero"`   // スタンプを取った日時
 }
 
@@ -46,7 +47,9 @@ func GetZukan(userID string) []ZukanEntry {
 			entry.Place = spot.Place
 			entry.Intro = spot.Intro
 			// CodeFlow は押したスタッフの画像になる(ビンゴのマスと同じ選び方)
-			entry.StampImage = stampImageOf(StampSource{SpotID: s.SpotID, Staff: s.Staff})
+			src := StampSource{SpotID: s.SpotID, Staff: s.Staff}
+			entry.StampImage = stampImageOf(src)
+			entry.Special = isSpecialStamp(src)
 			entry.StampedAt = s.StampedAt
 		}
 		entries[i] = entry

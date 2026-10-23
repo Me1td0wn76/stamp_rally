@@ -54,6 +54,7 @@ type BingoCell struct {
 	Type       SpotType `json:"type"`                  // このマスのType
 	Filled     bool     `json:"filled"`                // スタンプ取得済か
 	StampImage string   `json:"stamp_image,omitempty"` // このマスに出すスタンプ画像(staff.go。スタッフ別トークンで押され、画像が登録されているときだけ入る)
+	Special    bool     `json:"special,omitempty"`     // 特別室を開くスタッフ(staff.go の Secret)のスタンプで埋まったマス。画面ではキラキラを付ける
 }
 
 // BingoResult はビンゴ状況のレスポンス
@@ -147,22 +148,24 @@ func GetBingoResult(userID string) BingoResult {
 	defer Mu.Unlock()
 
 	// スタンプに保存されたマス番号から、埋まっているマスと、そのマスに出す画像を集める
-	var filled [bingoCellCount]bool
+	var filled, special [bingoCellCount]bool
 	var images [bingoCellCount]string
 	filledCount := 0
 	stampedIDs := make([]int, 0, len(Stamps[userID]))
 	for _, s := range Stamps[userID] {
 		stampedIDs = append(stampedIDs, s.SpotID)
 		if s.CellIndex >= 0 && s.CellIndex < bingoCellCount && !filled[s.CellIndex] {
+			src := StampSource{SpotID: s.SpotID, Staff: s.Staff}
 			filled[s.CellIndex] = true
-			images[s.CellIndex] = stampImageOf(StampSource{SpotID: s.SpotID, Staff: s.Staff})
+			images[s.CellIndex] = stampImageOf(src)
+			special[s.CellIndex] = isSpecialStamp(src)
 			filledCount++
 		}
 	}
 
 	cells := make([]BingoCell, bingoCellCount)
 	for i, t := range layout {
-		cells[i] = BingoCell{Index: i, Type: t, Filled: filled[i], StampImage: images[i]}
+		cells[i] = BingoCell{Index: i, Type: t, Filled: filled[i], StampImage: images[i], Special: special[i]}
 	}
 
 	// ライン判定

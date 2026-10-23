@@ -97,6 +97,47 @@ func TestSecretStampsCountAndConflict(t *testing.T) {
 	}
 }
 
+// 特別室を開くスタッフのスタンプで埋まったマス・図鑑のスポットだけ special が付く(ほかのスタッフ・スポットには付かない)
+func TestSpecialStampMarked(t *testing.T) {
+	resetSecretRoomNos(t)
+	spot := firstSpotWithoutStaff(t)
+	for i, st := range staffTokens {
+		userID := fmt.Sprintf("special-mark-test-%d", i)
+		acquireForTest(t, userID, StampSource{SpotID: st.SpotID, Staff: st.Staff})
+		if _, _, status, errMsg := AcquireStamp(userID, StampSource{SpotID: spot.ID}); status != http.StatusCreated {
+			t.Fatalf("AcquireStamp(spot %d): status %d (%s)", spot.ID, status, errMsg)
+		}
+		want := st.Secret != ""
+
+		specialCells := 0
+		for _, c := range GetBingoResult(userID).Cells {
+			if c.Special {
+				specialCells++
+			}
+		}
+		wantCells := 0
+		if want {
+			wantCells = 1
+		}
+		if specialCells != wantCells {
+			t.Errorf("staff %q: %d special cells, want %d", st.Staff, specialCells, wantCells)
+		}
+
+		for _, e := range GetZukan(userID) {
+			switch e.SpotID {
+			case st.SpotID:
+				if e.Special != want {
+					t.Errorf("staff %q: zukan special = %v, want %v", st.Staff, e.Special, want)
+				}
+			default:
+				if e.Special {
+					t.Errorf("staff %q: spot %d must not be special", st.Staff, e.SpotID)
+				}
+			}
+		}
+	}
+}
+
 // 同じ人には同じ番号、別の人には次の番号
 func TestSecretRoomNo(t *testing.T) {
 	resetSecretRoomNos(t)

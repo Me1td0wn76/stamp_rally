@@ -26,11 +26,14 @@ type staffToken struct {
 	QrToken    string // このスタッフの QRコード・NFCタグの URL(?spot=<トークン>)に入れるトークン
 	NfcUID     string // このスタッフの NFC タグの UID(アプリの NFC 読み込み画面用。未登録なら空)
 	StampImage string // このスタッフが押したマスに出す画像(public/stamps/ のファイル名。空ならほかのマスと同じかぼちゃ)
-	Secret     string // このスタッフのスタンプを取ったときに開く隠し画面("special-room")。空なら何もない
+	Secret     string // このスタッフのスタンプを取ったときに開く隠し画面(SecretSpecialRoom)。空なら何もない
 }
 
+// SecretSpecialRoom は特別室(隠し画面)の名前。staffToken.Secret と、スタンプ取得 API の secret.room に入る
+const SecretSpecialRoom = "special-room"
+
 var staffTokens = []staffToken{
-	{SpotID: 1, Staff: "Me1td0wn76", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw", StampImage: "Me1td0wn76_stamp.png", Secret: "special-room"},
+	{SpotID: 1, Staff: "Me1td0wn76", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw", StampImage: "Me1td0wn76_stamp.png", Secret: SecretSpecialRoom},
 	{SpotID: 1, Staff: "Tongari-Boy", QrToken: "fUAtG4HeJkFkUyz7LUJqdw", StampImage: "UCI_stamp.png"},
 	{SpotID: 1, Staff: "スタッフ3", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff3.svg"},
 }
@@ -67,30 +70,45 @@ type Secret struct {
 // スタンプと同じくメモリに置くだけなので、サーバーを再起動すると数え直しになる
 var secretRoomNos = make(map[string]map[string]int)
 
+// secretStaffOf は、src が隠し画面を開くスタッフ(Secret のあるスタッフ)のスタンプなら、そのスタッフを返す
+func secretStaffOf(src StampSource) (staffToken, bool) {
+	if src.Staff == "" {
+		return staffToken{}, false
+	}
+	for _, st := range staffTokens {
+		if st.SpotID == src.SpotID && st.Staff == src.Staff && st.Secret != "" {
+			return st, true
+		}
+	}
+	return staffToken{}, false
+}
+
+// isSpecialStamp は、隠し画面を開くスタッフのスタンプかを返す
+// ビンゴのマス・図鑑の special に入れる(画面ではキラキラを付ける。スタッフ名は返さない)
+func isSpecialStamp(src StampSource) bool {
+	_, ok := secretStaffOf(src)
+	return ok
+}
+
 // secretFor は、src が隠し画面を開くスタッフのスタンプなら、応答に足す Secret を返す(それ以外は nil)
 // 入室番号は、その隠し画面を開くスタンプを初めて取ったときに振り、同じユーザーにはいつも同じ番号を返す
 // スタンプの記録と同じロックの中で数えるため、Mu を持ったまま呼ぶこと
 func secretFor(userID string, src StampSource) *Secret {
-	if src.Staff == "" {
+	st, ok := secretStaffOf(src)
+	if !ok {
 		return nil
 	}
-	for _, st := range staffTokens {
-		if st.SpotID != src.SpotID || st.Staff != src.Staff || st.Secret == "" {
-			continue
-		}
-		nos := secretRoomNos[st.Secret]
-		if nos == nil {
-			nos = make(map[string]int)
-			secretRoomNos[st.Secret] = nos
-		}
-		no, ok := nos[userID]
-		if !ok {
-			no = len(nos) + 1
-			nos[userID] = no
-		}
-		return &Secret{Room: st.Secret, No: no, Staff: st.Staff, StampImage: st.StampImage, Stamps: len(Stamps[userID])}
+	nos := secretRoomNos[st.Secret]
+	if nos == nil {
+		nos = make(map[string]int)
+		secretRoomNos[st.Secret] = nos
 	}
-	return nil
+	no, entered := nos[userID]
+	if !entered {
+		no = len(nos) + 1
+		nos[userID] = no
+	}
+	return &Secret{Room: st.Secret, No: no, Staff: st.Staff, StampImage: st.StampImage, Stamps: len(Stamps[userID])}
 }
 
 // StaffStampCount はスタッフごとのスタンプ数
