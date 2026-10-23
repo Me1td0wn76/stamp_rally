@@ -78,6 +78,14 @@ type StampResponse struct {
 	Secret *model.Secret `json:"secret,omitempty"`
 }
 
+// StampErrorResponse は QR・NFC でスタンプを取れなかったときの応答({"error": ...})
+// 取得済み(409)のときだけ、特別室のカギを持っている人が、特別室を開くスタッフのトークンをもう一度読んだら secret を足す
+// (もう一度特別室に入れるように。入室番号は最初と同じ)
+type StampErrorResponse struct {
+	Error  string        `json:"error"`
+	Secret *model.Secret `json:"secret,omitempty"`
+}
+
 // PostStampByNfcはNFCタグのUIDを使ってスタンプを取得するハンドラー
 // NFCリーダーが読み取ったUIDを受け取り、対応するスポットを特定してスタンプを付与する
 func PostStampByNfc(c *gin.Context) {
@@ -99,7 +107,7 @@ func PostStampByNfc(c *gin.Context) {
 	// スタンプ取得処理
 	stamp, secret, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
-		c.JSON(status, gin.H{"error": errMsg})
+		c.JSON(status, StampErrorResponse{Error: errMsg, Secret: secret})
 		return
 	}
 	c.JSON(http.StatusCreated, StampResponse{Stamp: *stamp, Secret: secret})
@@ -126,7 +134,7 @@ func PostStampByQr(c *gin.Context) {
 	// スタンプ取得処理
 	stamp, secret, status, errMsg := model.AcquireStamp(userIDFrom(c), src)
 	if errMsg != "" {
-		c.JSON(status, gin.H{"error": errMsg})
+		c.JSON(status, StampErrorResponse{Error: errMsg, Secret: secret})
 		return
 	}
 	c.JSON(http.StatusCreated, StampResponse{Stamp: *stamp, Secret: secret})
@@ -162,6 +170,17 @@ func GetBingo(c *gin.Context) {
 // まだ取っていないスポットの名前・場所・説明は model側(zukan.go)で空にしてある(画面では ？ で出す)
 func GetZukan(c *gin.Context) {
 	c.JSON(http.StatusOK, model.GetZukan(userIDFrom(c)))
+}
+
+// GetSpecialRoom は、特別室のカギ(特別室を開くスタッフのスタンプ)を持っている人に、入室の記録(secret と同じ中身)を返すハンドラー
+// 画面の端末に入った記録が残っていないとき(保存できなかった・消えた)に、ビンゴ画面などから入り直すのに使う。カギがない人は 403
+func GetSpecialRoom(c *gin.Context) {
+	secret, ok := model.GetHeldSecret(userIDFrom(c), model.SecretSpecialRoom)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "no key"})
+		return
+	}
+	c.JSON(http.StatusOK, secret)
 }
 
 // GetSpecialRoomLive は、特別室の「いまの会場」(参加者・スタンプ・特別室に入った人・いま部屋にいる人の数)を返すハンドラー

@@ -198,6 +198,8 @@ func userCount() int {
 // Business logic
 // src.Staff(スタッフ別トークンで取ったときだけ入る)はスタンプに記録する
 // 隠し画面を開くスタッフ(staff.go の Secret)のスタンプなら、応答に足す Secret も返す(それ以外は nil)
+// 取得済み(409)でも、隠し画面を開くスタッフのトークンを、その隠し画面のカギを持っている人がもう一度読んだときは
+// Secret を返す(もう一度入れるように。入室番号は同じ)
 func AcquireStamp(userID string, src StampSource) (*Stamp, *Secret, int, string) {
 	spot, ok := GetSpotByID(src.SpotID)
 	if !ok {
@@ -209,7 +211,11 @@ func AcquireStamp(userID string, src StampSource) (*Stamp, *Secret, int, string)
 
 	for _, s := range Stamps[userID] {
 		if s.SpotID == src.SpotID {
-			return nil, nil, http.StatusConflict, "stamp already acquired"
+			var again *Secret
+			if st, ok := secretStaffOf(src); ok {
+				again = heldSecret(userID, st.Secret)
+			}
+			return nil, again, http.StatusConflict, "stamp already acquired"
 		}
 	}
 
