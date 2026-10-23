@@ -81,3 +81,35 @@ func TestGetSpecialRoomLiveForbidden(t *testing.T) {
 		t.Errorf("status = %d, want 403", w.Code)
 	}
 }
+
+// 取れなかったときの応答：ふだんは {"error": ...} だけ。もう一度入れるときだけ secret が付く
+func TestStampErrorResponseJSON(t *testing.T) {
+	b, err := json.Marshal(StampErrorResponse{Error: "stamp already acquired"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(b), `{"error":"stamp already acquired"}`; got != want {
+		t.Errorf("without secret: got %s, want %s", got, want)
+	}
+	b, _ = json.Marshal(StampErrorResponse{Error: "stamp already acquired", Secret: &model.Secret{Room: "special-room", No: 3}})
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	if s, ok := m["secret"].(map[string]any); !ok || s["no"] != float64(3) {
+		t.Errorf("with secret: got %s", b)
+	}
+}
+
+// 特別室のカギを持っていない人は、入室の記録を取れない(403)
+func TestGetSpecialRoomForbidden(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/special-room", nil)
+	c.Set(userIDKey, "special-room-no-key")
+	GetSpecialRoom(c)
+	if w.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want 403", w.Code)
+	}
+}

@@ -75,7 +75,7 @@ func TestSecretOnlyForSecretStaff(t *testing.T) {
 	}
 }
 
-// stamps は、取ったあとのその人のスタンプの数。同じスタンプをもう一度読んだとき(409)は secret なし
+// stamps は、取ったあとのその人のスタンプの数。同じスタンプをもう一度読んだとき(409)も、カギを持っているので secret が付く(番号は同じ)
 func TestSecretStampsCountAndConflict(t *testing.T) {
 	resetSecretRoomNos(t)
 	const userID = "secret-test-count"
@@ -93,9 +93,62 @@ func TestSecretStampsCountAndConflict(t *testing.T) {
 		t.Errorf("stamps: got %d, want 2", secret.Stamps)
 	}
 
+	first := *secret
 	_, secret, status, _ = AcquireStamp(userID, src)
-	if status != http.StatusConflict || secret != nil {
-		t.Errorf("second time: got status %d, secret %+v, want 409 without a secret", status, secret)
+	if status != http.StatusConflict || secret == nil {
+		t.Fatalf("second time: got status %d, secret %+v, want 409 with a secret", status, secret)
+	}
+	if *secret != first {
+		t.Errorf("second time: got %+v, want the same as the first time %+v", *secret, first)
+	}
+}
+
+// 取得済み(409)で secret が付くのは、特別室を開くスタッフのトークンを、カギを持っている人が読んだときだけ
+func TestSecretOnConflictNeedsKey(t *testing.T) {
+	resetSecretRoomNos(t)
+	st := firstSecretStaff(t)
+	secretSrc := StampSource{SpotID: st.SpotID, Staff: st.Staff}
+	// 同じスポットの、特別室を開かないスタッフ
+	var other StampSource
+	for _, o := range staffTokens {
+		if o.SpotID == st.SpotID && o.Secret == "" {
+			other = StampSource{SpotID: o.SpotID, Staff: o.Staff}
+			break
+		}
+	}
+	if other.Staff == "" {
+		t.Skip("no staff without a secret in the same spot")
+	}
+
+	// カギを持っている人が、特別室を開かないスタッフのトークンを読んでも付かない
+	acquireForTest(t, "secret-conflict-holder", secretSrc)
+	if _, secret, status, _ := AcquireStamp("secret-conflict-holder", other); status != http.StatusConflict || secret != nil {
+		t.Errorf("holder reads other staff: got status %d, secret %+v, want 409 without a secret", status, secret)
+	}
+	// ほかのスタッフのスタンプを持っている人(カギなし)が、特別室を開くスタッフのトークンを読んでも付かない
+	acquireForTest(t, "secret-conflict-other", other)
+	if _, secret, status, _ := AcquireStamp("secret-conflict-other", secretSrc); status != http.StatusConflict || secret != nil {
+		t.Errorf("non-holder reads secret staff: got status %d, secret %+v, want 409 without a secret", status, secret)
+	}
+}
+
+// 入室の記録の取り直し(GET /api/special-room)：カギを持っている人だけ、最初と同じ中身が返る
+func TestGetHeldSecret(t *testing.T) {
+	resetSecretRoomNos(t)
+	st := firstSecretStaff(t)
+	first := acquireForTest(t, "secret-held-a", StampSource{SpotID: st.SpotID, Staff: st.Staff})
+
+	got, ok := GetHeldSecret("secret-held-a", st.Secret)
+	if !ok || *got != *first {
+		t.Errorf("holder: got %+v (ok %v), want %+v", got, ok, *first)
+	}
+	setTestStamps(t, "secret-held-none", nil)
+	if got, ok := GetHeldSecret("secret-held-none", st.Secret); ok {
+		t.Errorf("non-holder: got %+v, want not ok", got)
+	}
+	// 別の隠し画面のカギとしては数えない
+	if got, ok := GetHeldSecret("secret-held-a", "other-room"); ok {
+		t.Errorf("other room: got %+v, want not ok", got)
 	}
 }
 
