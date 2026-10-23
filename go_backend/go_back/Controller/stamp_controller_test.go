@@ -3,8 +3,12 @@ package controller
 import (
 	"encoding/json"
 	"go_back/go_backend/go_back/model"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // スタンプ取得の 201 の応答：Stamp の JSON はそのままで、secret は隠し画面を開くスタッフのときだけ付く
@@ -62,5 +66,18 @@ func TestStampResponseJSON(t *testing.T) {
 		if got[k] != v {
 			t.Errorf("secret: %s = %v, want %v", k, got[k], v)
 		}
+	}
+}
+
+// 特別室に入っていない人は「いまの会場」を見られない(403)
+func TestGetSpecialRoomLiveForbidden(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/special-room/live", nil)
+	c.Set(userIDKey, "special-live-not-entered")
+	GetSpecialRoomLive(c)
+	if w.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want 403", w.Code)
 	}
 }

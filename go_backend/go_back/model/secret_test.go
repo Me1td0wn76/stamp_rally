@@ -4,18 +4,20 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 )
 
-// resetSecretRoomNos は、入室番号を 1 から数え直す(テストが終わったら元に戻す)
+// resetSecretRoomNos は、入室番号を 1 から数え直し、部屋にいる人も空にする(テストが終わったら元に戻す)
 func resetSecretRoomNos(t *testing.T) {
 	t.Helper()
 	Mu.Lock()
-	saved := secretRoomNos
+	savedNos, savedSeen := secretRoomNos, secretRoomSeen
 	secretRoomNos = make(map[string]map[string]int)
+	secretRoomSeen = make(map[string]map[string]time.Time)
 	Mu.Unlock()
 	t.Cleanup(func() {
 		Mu.Lock()
-		secretRoomNos = saved
+		secretRoomNos, secretRoomSeen = savedNos, savedSeen
 		Mu.Unlock()
 	})
 }
@@ -166,5 +168,51 @@ func TestSecretRoomNo(t *testing.T) {
 	}
 	if next.No != len(users)+1 {
 		t.Errorf("next user: no = %d, want %d", next.No, len(users)+1)
+	}
+}
+
+// 「いまの会場」は特別室に入った人だけが見られ、最近取りに来た人を「いま部屋にいる人」として数える
+func TestSecretRoomLive(t *testing.T) {
+	resetSecretRoomNos(t)
+	st := firstSecretStaff(t)
+	src := StampSource{SpotID: st.SpotID, Staff: st.Staff}
+	now := time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC)
+
+	// まだ入っていない人は見られない(部屋にいる人にも数えない)
+	const outsider = "secret-live-outsider"
+	setTestStamps(t, outsider, nil)
+	if _, ok := GetSecretRoomLive(outsider, st.Secret, now); ok {
+		t.Fatal("outsider: got ok, want not entered")
+	}
+
+	acquireForTest(t, "secret-live-a", src)
+	acquireForTest(t, "secret-live-b", src)
+
+	a, ok := GetSecretRoomLive("secret-live-a", st.Secret, now)
+	if !ok {
+		t.Fatal("a: got not entered")
+	}
+	if a.No != 1 || a.Entrants != 2 || a.Here != 1 {
+		t.Errorf("a: got %+v, want no 1, 2 entrants, 1 here", a)
+	}
+	b, _ := GetSecretRoomLive("secret-live-b", st.Secret, now.Add(10*time.Second))
+	if b.No != 2 || b.Here != 2 {
+		t.Errorf("b: got %+v, want no 2, 2 here", b)
+	}
+	// a は 45 秒後にもう一度来た。b は 35 秒前に来たきりなので、もう部屋にいないと見なす
+	a, _ = GetSecretRoomLive("secret-live-a", st.Secret, now.Add(45*time.Second))
+	if a.Here != 1 {
+		t.Errorf("a after 45s: here = %d, want 1", a.Here)
+	}
+
+	// 参加者とスタンプは会場全体の数
+	Mu.Lock()
+	stamps := 0
+	for _, s := range Stamps {
+		stamps += len(s)
+	}
+	Mu.Unlock()
+	if a.Stamps != stamps || a.Players != userCount() {
+		t.Errorf("a: stamps %d, players %d, want %d, %d", a.Stamps, a.Players, stamps, userCount())
 	}
 }

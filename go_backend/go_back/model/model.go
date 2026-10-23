@@ -187,6 +187,14 @@ func UserExists(userID string) bool {
 	return exists
 }
 
+// userCount は発行済みのユーザーIDの数を返す(特別室の「いまの会場」に出す)
+func userCount() int {
+	usersMu.RLock()
+	defer usersMu.RUnlock()
+
+	return len(Users)
+}
+
 // Business logic
 // src.Staff(スタッフ別トークンで取ったときだけ入る)はスタンプに記録する
 // 隠し画面を開くスタッフ(staff.go の Secret)のスタンプなら、応答に足す Secret も返す(それ以外は nil)

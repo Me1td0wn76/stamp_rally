@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go_back/go_backend/go_back/model"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -161,4 +162,16 @@ func GetBingo(c *gin.Context) {
 // まだ取っていないスポットの名前・場所・説明は model側(zukan.go)で空にしてある(画面では ？ で出す)
 func GetZukan(c *gin.Context) {
 	c.JSON(http.StatusOK, model.GetZukan(userIDFrom(c)))
+}
+
+// GetSpecialRoomLive は、特別室の「いまの会場」(参加者・スタンプ・特別室に入った人・いま部屋にいる人の数)を返すハンドラー
+// 特別室に入った人(特別室を開くスタッフのスタンプを取った人)だけが見られる。ほかの人は 403
+// 特別室の画面を開いている間、画面が10秒ごとに呼ぶ(呼ばれた時刻で「いま部屋にいる人」を数える。model/secret_room.go)
+func GetSpecialRoomLive(c *gin.Context) {
+	live, ok := model.GetSecretRoomLive(userIDFrom(c), model.SecretSpecialRoom, time.Now())
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not entered"})
+		return
+	}
+	c.JSON(http.StatusOK, live)
 }

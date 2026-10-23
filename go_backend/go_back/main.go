@@ -59,6 +59,9 @@ func main() {
 
 			// GET /api/zukan：ユーザーのスタンプ図鑑(全スポットと、それぞれスタンプを取ったか)を返す
 			user.GET("/zukan", controller.GetZukan)
+
+			// GET /api/special-room/live：特別室の「いまの会場」の数字を返す(特別室に入った人だけ。ほかは 403)
+			user.GET("/special-room/live", controller.GetSpecialRoomLive)
 		}
 
 		// ここから下は管理用API(環境変数 ADMIN_PASSWORD を設定したときだけ有効)
