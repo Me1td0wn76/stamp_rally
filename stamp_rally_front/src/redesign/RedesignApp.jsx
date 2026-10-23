@@ -12,6 +12,7 @@ import Manual from './Manual.jsx';
 import Credits from './Credits.jsx';
 import Haunt from './Haunt.jsx';
 import Loader from './Loader.jsx';
+import { SpecialSky } from './Sparkle.jsx';
 // 隠しミニゲームは見つけたときに初めて読み込む（ふだんの読み込みを増やさないため）
 const WitchGame = lazy(() => import('./WitchGame.jsx'));
 // 特別室（入り口の演出と、部屋）も同じく、見つけたときに初めて読み込む
@@ -181,7 +182,13 @@ function RedesignApp() {
     <Frame
       scrollKey={currentScreen}
       // 説明画面では黒猫をつかんで上に引っぱると、開発者紹介（隠し画面）へ
-      before={<Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />}
+      // 特別室に入ったことがある人は、夜空に虹色の星も出る
+      before={(
+        <>
+          <Haunt catchable={currentScreen === 'manual' && !guideOpen} onCatch={() => navigate('credits')} />
+          {special && <SpecialSky />}
+        </>
+      )}
       after={(
         <>
           <AssistiveTouch page={currentScreen} onGo={navigate} hideTip={guideOpen || boot !== 'done'} onSecret={() => setSecretOpen(true)} special={special !== null} />

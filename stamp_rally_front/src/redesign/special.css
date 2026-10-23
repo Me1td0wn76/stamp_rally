@@ -199,9 +199,52 @@
 .rd-sp-photo-stamp { position: absolute; right: -6px; bottom: -14px; width: 118px; height: 118px; object-fit: contain; transform: rotate(-12deg); filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .3)); }
 .rd-sp-photo-cap { font: 400 15px/1.4 var(--display); text-align: center; color: var(--ink); }
 
+/* -----------------------------------------------------------------
+   特別なキラキラ（Sparkle.jsx）
+   特別室のカギになるスタンプ（/api/bingo・/api/zukan の special）のマスと図鑑のカードは、ホログラムの紙にして星を光らせる。
+   特別室に入ったことがある人は、夜空にも虹色の星が出る
+   ----------------------------------------------------------------- */
+.rd {
+  --holo: linear-gradient(115deg, #FBD872 0%, #F7AFC7 20%, #A9DDF0 40%, #CDB6F6 60%, #FBD872 80%, #F7AFC7 100%);
+  --shine: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .8) 50%, transparent 60%);
+  --star4: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+}
+/* ビンゴのマス：ホログラムの色がゆっくり流れ、ときどき光がすべる */
+.rd-cell.is-special { isolation: isolate; overflow: hidden; background: var(--holo); background-size: 300% 300%; animation: rd-sp-holo 6s ease-in-out infinite alternate; }
+.rd-cell.is-special:not(.is-line) { border: 2px solid var(--gold); }
+.rd-cell.is-special::after, .rd-zk-card.is-special::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--shine) no-repeat; background-size: 250% 100%; animation: rd-sp-shine 3.6s ease-in-out 1s infinite; }
+/* 図鑑のカード：紙（::before）をホログラムにする。光も同じ形に切る */
+.rd-zk-card.is-on.is-special::before { background: var(--holo); background-size: 300% 300%; animation: rd-sp-holo 6s ease-in-out infinite alternate; }
+.rd-zk-card.is-special::after { clip-path: var(--cut-box); }
+.rd-zk-art.is-special { position: relative; }
+.rd-zk-rare { align-self: center; padding: 1px 10px 2px; background: var(--holo); font-size: 12px; font-weight: 900; color: var(--ink); clip-path: var(--cut-tag); }
+@keyframes rd-sp-holo { to { background-position: 100% 100%; } }
+@keyframes rd-sp-shine { 0%, 50% { background-position: 150% 0; } 85%, 100% { background-position: -50% 0; } }
+/* 重ねる星。まん中が白く、ふちが金色の4つ角の星。明るい紙の上でも見えるように、オレンジの光でふちどる */
+.rd-sp-glitter { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.rd-sp-glitter i { position: absolute; width: var(--s, 12px); aspect-ratio: 1; opacity: 0; filter: drop-shadow(0 0 2px rgba(238, 122, 43, .9)) drop-shadow(0 0 5px rgba(255, 255, 255, .9)); animation: rd-sp-glint 2.6s ease-in-out infinite; }
+.rd-sp-glitter i::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, #FFF 0 30%, var(--gold) 75%); clip-path: var(--star4); }
+.rd-sp-glitter i:nth-child(1) { left: 5%; top: 6%; --s: 17px; }
+.rd-sp-glitter i:nth-child(2) { right: 7%; top: 12%; --s: 12px; animation-delay: .5s; }
+.rd-sp-glitter i:nth-child(3) { left: 10%; bottom: 10%; --s: 11px; animation-delay: 1.1s; }
+.rd-sp-glitter i:nth-child(4) { right: 8%; bottom: 7%; --s: 19px; animation-delay: 1.6s; }
+.rd-sp-glitter i:nth-child(5) { left: 46%; top: 2%; --s: 10px; animation-delay: 2.1s; }
+@keyframes rd-sp-glint { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 40% { opacity: 1; transform: scale(1) rotate(45deg); } 65% { opacity: 0; transform: scale(.4) rotate(90deg); } }
+/* 夜空の虹色の星（特別室に入ったことがある人だけ）。中身の後ろに置く */
+.rd-sp-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.rd-sp-sky i { position: absolute; width: var(--s); aspect-ratio: 1; opacity: .2; animation: rd-sp-prism var(--d) ease-in-out var(--dl) infinite; }
+.rd-sp-sky i::before { content: ""; position: absolute; inset: -70%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 246, 226, .5), transparent 65%); }
+.rd-sp-sky i::after { content: ""; position: absolute; inset: 0; background: conic-gradient(#FBE08A, #F7C6D3, #BFE3EE, #DCCBF6, #FBE08A); clip-path: var(--star4); }
+@keyframes rd-sp-prism { 0%, 100% { opacity: .15; transform: scale(.5) rotate(0); } 50% { opacity: 1; transform: scale(1.1) rotate(60deg); } }
+
 /* 動きを減らす設定：演出は最後の形（扉と入室証）だけを見せ、部屋の中の動きも止める */
 @media (prefers-reduced-motion: reduce) {
   .rd-sp-entry { --freeze: 60000ms !important; }
   .rd-sp-steam, .rd-sp-cursor, .rd-sp-moonlit, .rd-sp-hot.is-new .rd-sp-tag, .rd-sp-hist li.is-now::before { animation: none; }
   .rd-sp-card-in { transition: none; }
+  /* キラキラは止めて、星は光ったままにする */
+  .rd-cell.is-special, .rd-zk-card.is-on.is-special::before, .rd-cell.is-special::after, .rd-zk-card.is-special::after { animation: none; }
+  .rd-cell.is-special::after, .rd-zk-card.is-special::after { content: none; }
+  .rd-sp-glitter i { animation: none; opacity: 1; transform: rotate(45deg); }
+  .rd-sp-sky i { animation: none; opacity: .7; }
 }

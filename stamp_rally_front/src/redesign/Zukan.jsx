@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Icon, Pumpkin, Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import LoadError from './LoadError.jsx';
+import { Glitter } from './Sparkle.jsx';
 import { NETWORK_ERROR, errorMessage } from '../api/errors';
 
 // スタンプ図鑑。全スポットを番号（スポットID）順に並べ、スタンプを取ったスポットは絵と名前、まだのスポットは ？ で出す
@@ -23,13 +24,15 @@ function zukanNo(spotId) {
 const stampedAtFormat = new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 // スタンプの絵。ビンゴのマスと同じ画像（public/stamps/ のファイル名）で、画像がないとき・読み込めなかったときはかぼちゃ
-function StampArt({ image, className = '' }) {
+// special（特別室のカギになるスタンプ）は、まわりで星を光らせる
+function StampArt({ image, special = false, className = '' }) {
   const [broken, setBroken] = useState(false);
   return (
-    <span className={`rd-zk-art ${className}`}>
+    <span className={`rd-zk-art ${className}${special ? ' is-special' : ''}`}>
       {image && !broken
         ? <img src={`/stamps/${image}`} alt="" onError={() => setBroken(true)} />
         : <Pumpkin />}
+      {special && <Glitter />}
     </span>
   );
 }
@@ -59,7 +62,8 @@ function StampDetail({ entry, onClose }) {
           <span className="rd-zk-no">{zukanNo(entry.spot_id)}</span>
           <span className="rd-zk-type">{TYPE_LABEL[entry.type] ?? ''}</span>
         </div>
-        <StampArt image={entry.stamp_image} className="rd-zk-art--big" />
+        <StampArt image={entry.stamp_image} special={entry.special} className="rd-zk-art--big" />
+        {entry.special && <p className="rd-zk-rare">✦ 特別なスタンプ ✦</p>}
         <h2 id="rd-zk-name">{entry.name}</h2>
         <p className={`rd-zk-intro${entry.intro ? '' : ' is-empty'}`}>{entry.intro || '説明は準備中です'}</p>
         <dl className="rd-dl rd-zk-dl">
@@ -171,9 +175,9 @@ const Zukan = ({ navigate, openGuide }) => {
         {entries.map((entry) => (
           <li key={entry.spot_id}>
             {entry.acquired ? (
-              <button type="button" className="rd-zk-card is-on" aria-haspopup="dialog" onClick={() => setSelected(entry)}>
+              <button type="button" className={`rd-zk-card is-on${entry.special ? ' is-special' : ''}`} aria-haspopup="dialog" onClick={() => setSelected(entry)}>
                 <span className="rd-zk-no">{zukanNo(entry.spot_id)}</span>
-                <StampArt image={entry.stamp_image} />
+                <StampArt image={entry.stamp_image} special={entry.special} />
                 <span className="rd-zk-name">{entry.name}</span>
               </button>
             ) : (

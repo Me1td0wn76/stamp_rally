@@ -4,6 +4,7 @@ import { NETWORK_ERROR, errorMessage } from '../api/errors';
 import { Icon, Pumpkin, Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import LoadError from './LoadError.jsx';
+import { Glitter } from './Sparkle.jsx';
 
 // ビンゴ。データの取り方・数え方・スタート・URL からのスタンプ取得は今の画面（components/Bingo.jsx）と同じ。
 // QR コード・NFC タグの読み取りは Scan.jsx に分けたので、ここでは読み込み画面へのボタンだけ置く
@@ -19,11 +20,12 @@ const TYPE_LABEL = {
 // スタンプ済みのマスの印
 // CodeFlow のスタンプは押したスタッフごとに画像が変わる（/api/bingo の stamp_image。画像は public/stamps/ に置き、ファイル名は staff.go に登録する）
 // 画像がないマスと、画像を読み込めなかったときはかぼちゃを出す
-function StampMark({ image }) {
+// special（特別室のカギになるスタンプ）は、読み上げでもそうと分かるようにする（キラキラはマスの方に付ける）
+function StampMark({ image, special }) {
   const [broken, setBroken] = useState(false);
   const showImage = image && !broken;
   return (
-    <span className={`rd-cell-mark${showImage ? ' rd-cell-mark--img' : ''}`} role="img" aria-label="スタンプ済み">
+    <span className={`rd-cell-mark${showImage ? ' rd-cell-mark--img' : ''}`} role="img" aria-label={special ? 'スタンプ済み（特別なスタンプ）' : 'スタンプ済み'}>
       {showImage
         ? <img className="rd-cell-img" src={`/stamps/${image}`} alt="" onError={() => setBroken(true)} />
         : <Pumpkin />}
@@ -188,10 +190,12 @@ const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, cle
         {cells.map((cell) => (
           <li
             key={cell.index}
-            className={`rd-cell${cell.filled ? ' is-on' : ''}${completedLineSet.has(cell.index) ? ' is-line' : ''}`}
+            className={`rd-cell${cell.filled ? ' is-on' : ''}${cell.special ? ' is-special' : ''}${completedLineSet.has(cell.index) ? ' is-line' : ''}`}
           >
             <span className="rd-cell-name">{TYPE_LABEL[cell.type] ?? ''}</span>
-            {cell.filled ? <StampMark image={cell.stamp_image} /> : <span className="rd-cell-state">まだ</span>}
+            {cell.filled ? <StampMark image={cell.stamp_image} special={cell.special} /> : <span className="rd-cell-state">まだ</span>}
+            {/* 特別室のカギになるスタンプのマスは、ホログラムの紙にして星を光らせる */}
+            {cell.special && <Glitter />}
           </li>
         ))}
       </ul>
