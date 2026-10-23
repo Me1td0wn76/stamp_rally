@@ -20,6 +20,7 @@ const SpecialEntry = lazy(() => import('./SpecialEntry.jsx'));
 const SpecialRoom = lazy(() => import('./SpecialRoom.jsx'));
 import { Frame } from './parts.jsx';
 import { NETWORK_ERROR, errorMessage } from '../api/errors';
+import { getSpecialRoom } from '../api/stamps';
 // NFCタグ・QRコードの URL(?spot=<トークン>)から取り出したトークン（取り出し方は spotToken.js）
 import { initialSpotToken } from './spotToken.js';
 
@@ -117,6 +118,19 @@ function RedesignApp() {
   const enterSpecial = () => {
     setSpecialEntry(null);
     navigate('special');
+  };
+  // 特別室に入り直す（ビンゴ画面の「特別室に入る」・キラキラのマス・図鑑から）
+  // 入った記録がこの端末にあれば、そのまま部屋へ。なければ（保存できなかった・消えた）サーバーから取り直し、入り口の演出から入る
+  // 取り直せなかったら false（カギを持っていない・通信できない）
+  const goSpecial = async () => {
+    if (special) {
+      navigate('special');
+      return true;
+    }
+    const s = await getSpecialRoom();
+    if (!s) return false;
+    openSpecial(s);
+    return true;
   };
 
   // 最初に開いたときの遊び方は「閉じる」なし（最後の「はじめる」でIDを発行して始める）
@@ -227,12 +241,14 @@ function RedesignApp() {
           navigate={navigate}
           openGuide={openGuide}
           onSecret={openSpecial}
+          hasSpecial={special !== null}
+          onOpenSpecial={goSpecial}
           pendingSpotToken={pendingSpotToken}
           clearPendingSpotToken={() => setPendingSpotToken(null)}
         />
       )}
       {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} onSecret={openSpecial} />}
-      {currentScreen === 'zukan' && <Zukan navigate={navigate} openGuide={openGuide} />}
+      {currentScreen === 'zukan' && <Zukan navigate={navigate} openGuide={openGuide} onOpenSpecial={goSpecial} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
       {currentScreen === 'credits' && <Credits navigate={navigate} />}

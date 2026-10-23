@@ -29,7 +29,7 @@ function spotTokenFrom(text) {
 }
 
 // onNotStarted: 未スタート(401)だったときに、読んだトークンを渡して呼ぶ（親はトークンを預かってビンゴ画面へ移る）
-// onSecret: 特別室を開くスタッフのスタンプを取ったときに、応答の secret を渡して呼ぶ（QR・NFC どちらでも。親が入り口の演出を出す）
+// onSecret: 特別室を開くスタッフのスタンプを取ったとき・もう一度読んだときに、応答の secret を渡して呼ぶ（QR・NFC どちらでも。親が入り口の演出を出す）
 const Scan = ({ navigate, onNotStarted, onSecret }) => {
   const [message, setMessage] = useState('');
   const [acquired, setAcquired] = useState(false);
@@ -53,7 +53,8 @@ const Scan = ({ navigate, onNotStarted, onSecret }) => {
       }
       setMessage(message);
       if (status === 201) setAcquired(true);
-      if (status === 201 && secret) onSecret?.(secret);
+      // 特別室のカギのスタンプなら入り口へ（もう一度読んだとき(409)も、カギを持っていれば secret が来る）
+      if ((status === 201 || status === 409) && secret) onSecret?.(secret);
     } finally {
       sendingRef.current = false;
     }

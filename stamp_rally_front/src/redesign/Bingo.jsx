@@ -35,8 +35,10 @@ function StampMark({ image, special }) {
 
 // onChecked: ビンゴ状況を取るたびに、スタート済みかを親に知らせる（true / false: 未スタート(401) / null: 取得に失敗）。
 // 親は最初の結果で、遊び方を出すか（未スタートなら出す）を決める
-// onSecret: 特別室を開くスタッフのスタンプを取ったときに、応答の secret を渡して呼ぶ（親が入り口の演出を出す）
-const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
+// onSecret: 特別室を開くスタッフのスタンプを取ったとき・もう一度読んだときに、応答の secret を渡して呼ぶ（親が入り口の演出を出す）
+// hasSpecial: 特別室に入った記録がこの端末にあるか / onOpenSpecial: 特別室に入り直す（入れなかったら false を返す）
+// 入った記録があるか、特別室のカギのスタンプ（special のマス）がある人には「特別室に入る」を出し、キラキラのマスも押せるようにする
+const Bingo = ({ navigate, openGuide, onChecked, onSecret, hasSpecial = false, onOpenSpecial, pendingSpotToken, clearPendingSpotToken, reloadSignal = 0 }) => {
   const [bingo, setBingo] = useState({ stamped_ids: [], bingo_count: 0, bingo_lines: [], is_complete: false });
   // スタート済みか(null: 確認中 / false: 未スタート / true: スタート済み)
   // ユーザーIDは HttpOnly Cookie にありJSから読めないため、APIの応答(401かどうか)で判定する
@@ -96,7 +98,8 @@ const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, cle
     }
     setMessage(message);
     if (status === 201) fetchBingo();
-    if (status === 201 && secret) onSecret?.(secret);
+    // 特別室のカギのスタンプなら入り口へ（もう一度読んだとき(409)も、カギを持っていれば secret が来る）
+    if ((status === 201 || status === 409) && secret) onSecret?.(secret);
     return status;
   }, [fetchBingo, handleUnauthorized, onSecret]);
 
@@ -160,6 +163,12 @@ const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, cle
     );
   }
 
+  // 特別室に入り直す。記録を取り直せなかったときは、QR をもう一度読めば入れることを伝える
+  const canEnterSpecial = Boolean(onOpenSpecial) && (hasSpecial || (bingo.cells ?? []).some((c) => c.special));
+  const openSpecialRoom = async () => {
+    if (!(await onOpenSpecial())) setMessage('特別室の記録を取れませんでした。CodeFlow のスタンプの QR をもう一度読むと入れます');
+  };
+
   // 盤面(取得前は空のマスを9個表示)
   const cells = bingo.cells?.length
     ? bingo.cells
@@ -196,6 +205,8 @@ const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, cle
             {cell.filled ? <StampMark image={cell.stamp_image} special={cell.special} /> : <span className="rd-cell-state">まだ</span>}
             {/* 特別室のカギになるスタンプのマスは、ホログラムの紙にして星を光らせる */}
             {cell.special && <Glitter />}
+            {/* キラキラのマスを押しても、特別室に入れる */}
+            {cell.special && onOpenSpecial && <button type="button" className="rd-cell-go" onClick={openSpecialRoom} aria-label="特別室に入る" />}
           </li>
         ))}
       </ul>
@@ -218,6 +229,9 @@ const Bingo = ({ navigate, openGuide, onChecked, onSecret, pendingSpotToken, cle
         <button type="button" className="rd-btn" onClick={() => navigate('prize')}><Icon name="prize" />景品</button>
         <button type="button" className="rd-btn" onClick={() => navigate('manual')}><Icon name="manual" />説明</button>
       </div>
+      {canEnterSpecial && (
+        <button type="button" className="rd-btn rd-btn--big rd-sp-go" onClick={openSpecialRoom}><Glitter />✦ 特別室に入る ✦</button>
+      )}
     </>
   );
 };
