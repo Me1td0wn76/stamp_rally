@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Title } from './parts.jsx';
 import SpecialTicket, { PUMPKIN } from './SpecialTicket.jsx';
+import SpecialSafe from './SpecialSafe.jsx';
 import { MEMBERS, STATS, NIGHT_OWL, HISTORY, GALLERY, ROOM_ITEMS, FORTUNES, HELP, GIT_LOG } from './specialData.js';
 
 // 特別室（隠し画面）。入り口（SpecialEntry.jsx）で入室証をもらった人だけが入れる。
@@ -237,7 +238,7 @@ function runCommand(input, ctx) {
     case 'git': return GIT_LOG.map((l) => ({ kind: 'out', text: l }));
     case 'fortune': return [{ kind: 'ok', text: FORTUNES[Math.floor(Math.random() * FORTUNES.length)] }];
     case 'pumpkinsay': return [{ kind: 'art', text: pumpkinsay(arg) }];
-    case 'sudo': return [{ kind: 'warn', text: arg === 'open safe' ? '金庫のカギは、まだどこにも見つかっていません。' : 'guest には sudo できません。' }];
+    case 'sudo': return [{ kind: 'warn', text: arg === 'open safe' ? '金庫は sudo では開きません。部屋の右下の金庫で、3けたの暗証番号を当ててください。' : 'guest には sudo できません。' }];
     case 'rm': return [{ kind: 'warn', text: 'やめて！ 特別室がこわれます。' }];
     default: return [{ kind: 'err', text: `command not found: ${cmd}（help で一覧）` }];
   }
@@ -416,8 +417,19 @@ function Photo({ back, no, cells, lines, stampImage, date, gold = false }) {
 }
 
 // ---------------------------------------------------------------- 本体
+// 金庫をいちばん早く開けた回数（まだ開けていなければ 0）。開けた人は金のチケットになる。この端末にだけ保存する
+const SAFE_KEY = 'rd.safeBest';
+function readSafeBest() { try { return Number(localStorage.getItem(SAFE_KEY)) || 0; } catch { return 0; } }
+function writeSafeBest(v) { try { localStorage.setItem(SAFE_KEY, String(v)); } catch { /* 保存できなくても、今回は金のチケットになる */ } }
+
 export default function SpecialRoom({ no = 1, cells, lines, stampImage = '', date = '2026.10.31', onExit, view: firstView = 'room', flipped, avatars = true, history }) {
   const [view, setView] = useState(firstView);
+  const [safeBest, setSafeBest] = useState(readSafeBest);
+  const openSafe = (tries) => {
+    const next = safeBest ? Math.min(safeBest, tries) : tries;
+    writeSafeBest(next);
+    setSafeBest(next);
+  };
   const [board, setBoard] = useState({ cells: cells ?? [], lines: lines ?? [] });
   // ビンゴのマスを渡されていないときは、自分で取る（取れなくても記念写真は空のマスで出せる）
   useEffect(() => {
@@ -432,7 +444,8 @@ export default function SpecialRoom({ no = 1, cells, lines, stampImage = '', dat
   if (view === 'members') return <Members back={toRoom} flipped={flipped} avatars={avatars} />;
   if (view === 'making') return <Making back={toRoom} />;
   if (view === 'term') return <Term back={toRoom} no={no} history={history} />;
-  if (view === 'photo') return <Photo back={toRoom} no={no} cells={board.cells} lines={board.lines} stampImage={stampImage} date={date} />;
+  if (view === 'photo') return <Photo back={toRoom} no={no} cells={board.cells} lines={board.lines} stampImage={stampImage} date={date} gold={safeBest > 0} />;
+  if (view === 'safe') return <SpecialSafe back={toRoom} best={safeBest} onOpen={openSafe} onPhoto={() => setView('photo')} no={no} date={date} stampImage={stampImage} />;
   return (
     <>
       <Room no={no} open={setView} />

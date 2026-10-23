@@ -112,7 +112,7 @@ export const ROOM_ITEMS = [
   { key: 'photo', label: '記念写真', icon: 'camera', ready: true },
   { key: 'live', label: 'いまの会場', icon: 'window', ready: false },
   { key: 'how', label: 'しくみ', icon: 'board', ready: false },
-  { key: 'safe', label: '金庫', icon: 'safe', ready: false },
+  { key: 'safe', label: '金庫', icon: 'safe', ready: true },
 ];
 
 // ---------------------------------------------------------------- 自由に打てるターミナル
