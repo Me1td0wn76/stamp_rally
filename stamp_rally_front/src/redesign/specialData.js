@@ -86,7 +86,7 @@ export const ROOM_ITEMS = [
   { key: 'term', label: 'ターミナル', icon: 'monitor', ready: true },
   { key: 'photo', label: '記念写真', icon: 'camera', ready: true },
   { key: 'live', label: 'いまの会場', icon: 'window', ready: true },
-  { key: 'how', label: 'しくみ', icon: 'board', ready: false },
+  { key: 'how', label: 'しくみ', icon: 'board', ready: true },
   { key: 'safe', label: '金庫', icon: 'safe', ready: true },
 ];
 export const FORTUNES = [
@@ -142,4 +142,22 @@ export const GIT_LOG = [
   'dd7a08e ダーツベイダー2のスタンプ画像を更新',
   'f5d41be スタンプ図鑑コンポーネントを新規作成',
   '44e18bb first commit create frontend with vite',
+];
+
+export const HOW_STEPS = [
+  { title: 'QR コード・NFC タグ', text: '中には URL が入っています。?spot= のあとが、スポット（とスタッフ）ごとのトークンです。当てずっぽうで作れないよう、16文字以上のランダムな文字列にしています。', code: 'https://…/?spot=••••••••' },
+  { title: 'ブラウザ → サーバー', text: 'トークンを POST で送ります。だれのスタンプかは、Cookie のユーザーIDでわかります。この Cookie は HttpOnly なので、JavaScript からは読めません。', code: 'POST /api/stamps/qr\n{ "qr_token": "••••••••" }' },
+  { title: 'サーバー（Go）', text: 'トークンから、どのスポット・どのスタッフかを探します。ロック（sync.Mutex）をかけてから、まだ取っていないかを確かめ、埋めるマスを暗号用の乱数（crypto/rand）で選びます。', code: 'AcquireStamp(userID, src)' },
+  { title: 'メモリに記録', text: 'データベースは使わず、サーバーのメモリ（Go の map）に置いています。サーバーを再起動すると、すべて消えます。', code: 'Stamps[userID] = append(Stamps[userID], stamp)' },
+  { title: 'サーバー → ブラウザ', text: '201 Created と、埋まったマスの番号を返します。特別室のカギのスタンプのときだけ、secret が付いて、この部屋が開きます。', code: '201 Created\n{ "spot_id": 1, "cell_index": 4, "secret": { … } }' },
+  { title: '画面（React）', text: 'ビンゴの状況を取り直して、マスにスタンプを押します。マスの並びは保存せず、ユーザーIDから毎回同じ計算で決めています。', code: 'GET /api/bingo' },
+];
+
+export const HOW_APIS = [
+  { path: '/api/bingo', label: 'ビンゴ', note: 'あなたのビンゴカード' },
+  { path: '/api/zukan', label: '図鑑', note: '全スポットと、取ったかどうか' },
+  { path: '/api/stamps', label: 'スタンプ', note: '取ったスタンプの記録' },
+  { path: '/api/special-room', label: '入室の記録', note: 'あなたの入室番号など' },
+  { path: '/api/special-room/live', label: 'いまの会場', note: '会場全体の数字' },
+  { path: '/api/special-room/how', label: 'サーバーの中', note: 'このページの「サーバーの中」' },
 ];

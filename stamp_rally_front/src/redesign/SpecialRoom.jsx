@@ -3,6 +3,7 @@ import { Title } from './parts.jsx';
 import Loader from './Loader.jsx';
 import SpecialTicket, { PUMPKIN } from './SpecialTicket.jsx';
 import SpecialSafe from './SpecialSafe.jsx';
+import SpecialHow from './SpecialHow.jsx';
 import { MEMBERS, STATS, NIGHT_OWL, HISTORY, GALLERY, ROOM_ITEMS, FORTUNES, HELP, GIT_LOG, TREATS, SECRET_NOTE, CAT_LINES } from './specialData.js';
 
 const pad4 = (n) => String(n).padStart(4, '0');
@@ -502,6 +503,7 @@ export default function SpecialRoom({ no = 1, cells, lines, stampImage = '', dat
 
   const toRoom = { label: '特別室', onClick: () => setView('room') };
   if (view === 'live') return <Live back={toRoom} live={live} />;
+  if (view === 'how') return <SpecialHow back={toRoom} />;
   if (view === 'members') return <Members back={toRoom} flipped={flipped} avatars={avatars} />;
   if (view === 'making') return <Making back={toRoom} />;
   if (view === 'term') return <Term back={toRoom} no={no} history={history} />;
