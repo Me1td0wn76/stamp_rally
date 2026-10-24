@@ -36,10 +36,10 @@ var staffTokens = []staffToken{
 	{SpotID: 1, Staff: "Me1td0wn76", QrToken: "zFQCO4BjiSJCz1dt0Dw9Rw", StampImage: "Me1td0wn76_stamp.png", Secret: SecretSpecialRoom},
 	{SpotID: 1, Staff: "Tongari-Boy", QrToken: "fUAtG4HeJkFkUyz7LUJqdw", StampImage: "UCI_stamp.png"},
 	{SpotID: 1, Staff: "Sabigon-MA", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "Sabigon-MA_stamp.png"},
-	{SpotID: 1, Staff: "syun17", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff1.svg"},
-	{SpotID: 1, Staff: "shouras", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff1.svg"},
-	{SpotID: 1, Staff: "niseeri-to", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff1.svg"},
-	{SpotID: 1, Staff: "Orica256", QrToken: "qYXSsfLX8eBK67ey6gisiw", StampImage: "staff1.svg"},
+	{SpotID: 1, Staff: "syun17", QrToken: "Z84lmOpeGpBJjoB8a2w9cw", StampImage: "staff1.svg"},
+	{SpotID: 1, Staff: "shouras", QrToken: "JMB7aE6ykdbRPz6xrZk5zQ", StampImage: "staff1.svg"},
+	{SpotID: 1, Staff: "niseeri-to", QrToken: "lENT24saioMFWwCCojdcpw", StampImage: "staff1.svg"},
+	{SpotID: 1, Staff: "Orica256", QrToken: "F4xMfrbpK6if6LrNm-dM1w", StampImage: "staff1.svg"},
 }
 
 // stampImageOf は、取ったマスに出すスタンプ画像のファイル名を返す
