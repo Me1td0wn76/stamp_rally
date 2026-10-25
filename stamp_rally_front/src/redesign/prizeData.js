@@ -5,6 +5,11 @@
 // 参加者に公開してよい内容だけを書く（決まっていない景品や、確認用の仮データは入れない）
 // 例: { id: 'umaibo', name: 'うまい棒', image: '/prizes/umaibo.webp' },
 //     { id: 'complete', name: 'お菓子セット', description: 'コンプリート報酬', image: '/prizes/complete.webp' },
-const PRIZES = [];
+// 【仮のデータ。本番の景品が決まったら差し替える(このまま master に入れない)】
+const PRIZES = [
+  { id: 'sample1', name: '仮の景品A', description: 'コンプリート報酬' },
+  { id: 'sample2', name: '仮の景品B', description: 'ビンゴ1列の景品' },
+  { id: 'sample3', name: '仮の景品C' },
+];
 
 export default PRIZES;
