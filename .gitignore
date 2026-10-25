@@ -19,6 +19,8 @@ stamp_rally_front/dist/
 stamp_rally_front/.env
 stamp_rally_front/.env.local
 stamp_rally_front/.env.*.local
+# 景品画像の元の写真(Exif が残っているので公開しない。npm run compress-images(stamp_rally_front/scripts/compress-images.js)で public/prizes/ に書き出す)
+stamp_rally_front/prize_originals/
 
 # ========================
 # OS
