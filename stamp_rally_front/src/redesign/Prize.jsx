@@ -6,6 +6,7 @@ import { NETWORK_ERROR, errorMessage } from '../api/errors';
 
 // 景品。ビンゴが1列でもそろっていれば「ビンゴ済み」、そろっていなければ「まだ」の画面を出す
 // そろったかどうかはビンゴ画面と同じ /api/bingo の bingo_count で判定する
+// どの状態でも下に「景品一覧を見る」を出す（一覧は API を使わないので、確認中・失敗したときも見られるように）
 const Prize = ({ navigate }) => {
   // null: 確認中 / false: まだ（未スタートも含む） / true: ビンゴ済み
   const [achieved, setAchieved] = useState(null);
@@ -38,6 +39,7 @@ const Prize = ({ navigate }) => {
       <>
         <Title name="景品" back={{ label: 'ビンゴ', onClick: () => navigate('bingo') }} />
         {message ? <LoadError message={message} /> : <Loader />}
+        <button type="button" className="rd-btn" onClick={() => navigate('prizeList')}>景品一覧を見る</button>
       </>
     );
   }
@@ -52,6 +54,7 @@ const Prize = ({ navigate }) => {
           <p>縦・横・ななめのどれか1列がそろうと景品と交換できます</p>
         </section>
         <button type="button" className="rd-btn rd-btn--pri rd-btn--big" onClick={() => navigate('bingo')}>ビンゴカードを見る</button>
+        <button type="button" className="rd-btn" onClick={() => navigate('prizeList')}>景品一覧を見る</button>
       </>
     );
   }
@@ -71,6 +74,7 @@ const Prize = ({ navigate }) => {
         <p>スタッフにこの画面を見せてね</p>
       </section>
       <button type="button" className="rd-btn" onClick={() => navigate('bingo')}>← 戻る</button>
+      <button type="button" className="rd-btn" onClick={() => navigate('prizeList')}>景品一覧を見る</button>
     </>
   );
 };
