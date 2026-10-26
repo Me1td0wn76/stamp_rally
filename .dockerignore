@@ -4,6 +4,3 @@
 **/*.exe
 **/*.exe~
 README.md
-
-# 景品画像の元の写真(.gitignore と同じく、ビルドに入れない)
-stamp_rally_front/prize_originals/

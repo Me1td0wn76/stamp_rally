@@ -30,6 +30,7 @@
 | 読み込み | カメラで QR コード、Web NFC で NFC タグ(Android の Chrome のみ)を読み込んでスタンプ取得 |
 | スタンプ図鑑 | 全スポットを番号順に表示。まだ取っていないスポットは「？」。取ったスタンプを押すと説明文・階・場所・取った日時を表示 |
 | 景品 | 景品交換場所の案内 |
+| 景品一覧 | 用意している景品を写真・名前・紹介文で紹介。景品画面の「景品一覧を見る」から開く(ビンゴしていなくても見られる) |
 | 遊び方 | 遊び方の説明 |
 
 `/mock` にアクセスすると、API を使わないモック画面を表示できます。
@@ -81,6 +82,7 @@ stamp_rally
 │           └───validate.go  起動時のデータ整合性チェック
 └───stamp_rally_front     フロントエンド (React + Vite)
     ├───public
+    │   ├───prizes        景品一覧の景品画像
     │   └───stamps        CodeFlow のスタッフごとのスタンプ画像
     └───src
         ├───App.jsx       画面切り替え・スタート処理
@@ -118,6 +120,17 @@ stamp_rally
 - NFC タグの UID とスポットの対応は [map.go](go_backend/go_back/model/map.go) に登録します(`POST /api/stamps/nfc` 用。今の画面はタグに書いた URL を読むので、UID の登録はいりません)
 - CodeFlow のスタッフ別トークン(と、スタッフのタグの UID)は [staff.go](go_backend/go_back/model/staff.go) に登録します(下の「CodeFlow のスタッフ別 URL」を参照)
 - 起動時に [validate.go](go_backend/go_back/model/validate.go) が ID や QR トークンの重複、ビンゴに必要なスポット数などをチェックし、問題があれば起動を止めます(UID 未登録のスポットは警告のみ)
+
+## 景品一覧の登録
+
+- 景品は [prizeData.js](stamp_rally_front/src/redesign/prizeData.js) の `PRIZES` に書きます。配列の順番がそのまま表示の順番です(API・DB は使いません。変えたら再デプロイが必要)
+  - `id`(重複しない識別子)・`name`(景品名)は必須、`description`(短い紹介文)・`image`(画像のパス)は任意です
+  - 今入っている「仮の景品A〜C」は画面を確かめるための仮データです。本番の景品が決まったら差し替えてください
+- 画像は [stamp_rally_front/public/prizes/](stamp_rally_front/public/prizes/) に置き、`image` に `/prizes/ファイル名` と書きます(`public` は書かない)
+  - 置いたファイルはそのまま公開されます(自動の圧縮はありません)。置く前に、撮影場所などの Exif を消し、長い辺 600px・1 枚 100KB 以下を目安に縮めてください([Squoosh](https://squoosh.app) で WebP・Lossless なし・品質 75〜80 にすると、Exif も消えます)
+  - 画像は正方形の枠に縦横比を保って収まります。読み込めなかったときは画像を出さず、名前と紹介文だけになります
+  - 同じ名前のまま差し替えると来場者の端末に古い画像が残ることがあるので、差し替えるときは別の名前にしてください
+- くわしい仕様は [docs/prize-list-design.md](docs/prize-list-design.md) を参照
 
 ## 環境変数(バックエンド)
 
