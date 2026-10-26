@@ -20,7 +20,9 @@ stamp_rally_front/.env
 stamp_rally_front/.env.local
 stamp_rally_front/.env.*.local
 # 景品画像の元の写真(Exif が残っているので公開しない。npm run compress-images(stamp_rally_front/scripts/compress-images.js)で public/prizes/ に書き出す)
-stamp_rally_front/prize_originals/
+# フォルダの場所だけは共有するため .gitkeep だけコミットする(フォルダごと無視すると ! で戻せないので /* にしている)
+stamp_rally_front/prize_originals/*
+!stamp_rally_front/prize_originals/.gitkeep
 
 # ========================
 # OS
