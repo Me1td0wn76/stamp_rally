@@ -8,6 +8,7 @@ import Bingo from './Bingo.jsx';
 import Scan from './Scan.jsx';
 import Zukan from './Zukan.jsx';
 import Prize from './Prize.jsx';
+import PrizeList from './PrizeList.jsx';
 import Manual from './Manual.jsx';
 import Credits from './Credits.jsx';
 import Haunt from './Haunt.jsx';
@@ -250,6 +251,7 @@ function RedesignApp() {
       {currentScreen === 'scan' && <Scan navigate={navigate} onNotStarted={handleScanNotStarted} onSecret={openSpecial} />}
       {currentScreen === 'zukan' && <Zukan navigate={navigate} openGuide={openGuide} onOpenSpecial={goSpecial} />}
       {currentScreen === 'prize' && <Prize navigate={navigate} />}
+      {currentScreen === 'prizeList' && <PrizeList navigate={navigate} />}
       {currentScreen === 'manual' && <Manual navigate={navigate} openGuide={openGuide} />}
       {currentScreen === 'credits' && <Credits navigate={navigate} />}
       {currentScreen === 'special' && special && (
