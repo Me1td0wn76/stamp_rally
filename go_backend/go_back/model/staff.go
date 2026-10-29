@@ -39,7 +39,7 @@ var staffTokens = []staffToken{
 	{SpotID: 1, Staff: "syun17", QrToken: "Z84lmOpeGpBJjoB8a2w9cw", StampImage: "staff1.svg"},
 	{SpotID: 1, Staff: "shouras", QrToken: "JMB7aE6ykdbRPz6xrZk5zQ", StampImage: "shouras.png"},
 	{SpotID: 1, Staff: "niseeri-to", QrToken: "lENT24saioMFWwCCojdcpw", StampImage: "staff1.svg"},
-	{SpotID: 1, Staff: "Orica256", QrToken: "F4xMfrbpK6if6LrNm-dM1w", StampImage: "staff1.svg"},
+	{SpotID: 1, Staff: "Orica256", QrToken: "F4xMfrbpK6if6LrNm-dM1w", StampImage: "Orica256.jpg"},
 	{SpotID: 1, Staff: "Gozaru", QrToken: "l32VnNrycxaxILraXWQVgD", StampImage: "gozaru.png"},
 }
 
