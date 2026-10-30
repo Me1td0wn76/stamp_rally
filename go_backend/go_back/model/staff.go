@@ -41,6 +41,7 @@ var staffTokens = []staffToken{
 	{SpotID: 1, Staff: "niseeri-to", QrToken: "lENT24saioMFWwCCojdcpw", StampImage: "staff1.svg"},
 	{SpotID: 1, Staff: "Orica256", QrToken: "F4xMfrbpK6if6LrNm-dM1w", StampImage: "staff1.svg"},
 	{SpotID: 1, Staff: "Gozaru", QrToken: "l32VnNrycxaxILraXWQVgD", StampImage: "gozaru.png"},
+	{SpotID: 1, Staff: "Okada", QrToken: "HFXVtk_MntsauVeP5AIFMg", StampImage: "okada.jpg"},
 }
 
 // stampImageOf は、取ったマスに出すスタンプ画像のファイル名を返す
