@@ -5,11 +5,14 @@ import LoadError from './LoadError.jsx';
 import { NETWORK_ERROR, errorMessage } from '../api/errors';
 
 // 景品。ビンゴが1列でもそろっていれば「ビンゴ済み」、そろっていなければ「まだ」の画面を出す
-// そろったかどうかはビンゴ画面と同じ /api/bingo の bingo_count で判定する
+// 9マスすべて埋まっていれば、ビンゴ済みの下にコンプリート報酬の交換も出す（コンプリートした人は両方もらえる）
+// そろったかどうかはビンゴ画面と同じ /api/bingo の bingo_count・is_complete で判定する
 // どの状態でも下に「景品一覧を見る」を出す（一覧は API を使わないので、確認中・失敗したときも見られるように）
 const Prize = ({ navigate }) => {
   // null: 確認中 / false: まだ（未スタートも含む） / true: ビンゴ済み
   const [achieved, setAchieved] = useState(null);
+  // 9マスすべて埋まっているか（コンプリート報酬を出すか）
+  const [complete, setComplete] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -27,6 +30,7 @@ const Prize = ({ navigate }) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? '不明なエラー');
         setAchieved(data.bingo_count > 0);
+        setComplete(data.is_complete === true);
       } catch (err) {
         console.error('ビンゴ状況取得失敗:', err);
         setMessage(errorMessage(status));
@@ -67,6 +71,14 @@ const Prize = ({ navigate }) => {
         <h2>景品交換場所</h2>
         <p>ビンゴ達成おめでとう！</p>
       </section>
+      {/* 受取場所はビンゴもコンプリート報酬も同じなので、いちばん下に1つだけ出す */}
+      {complete && (
+        <section className="rd-ticket rd-ticket--yes">
+          <Icon name="prize" />
+          <h2>コンプリート報酬</h2>
+          <p>全マス制覇おめでとう！</p>
+        </section>
+      )}
       <section className="rd-box">
         <dl className="rd-dl">
           <dt>受取場所</dt><dd>402教室に来てください</dd>
